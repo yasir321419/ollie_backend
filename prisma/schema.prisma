@@ -110,7 +110,7 @@ model Admin {
 model Blog {
   id         String          @id @default(uuid())
   title      String
-  content    String
+  content    String @db.LongText
   image      String?
   categoryId String
   adminId    String
