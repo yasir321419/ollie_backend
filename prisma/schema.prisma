@@ -462,7 +462,7 @@ model Message {
 model Event {
   id                 String                 @id @default(uuid())
   eventName          String
-  eventDescription   String
+  eventDescription   String @db.LongText
   eventDateAndTime   DateTime
   eventAddress       String
   eventStates        String
