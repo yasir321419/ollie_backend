@@ -26,6 +26,13 @@ adminAuthRouter.post(
   adminAuthController.editImage
 );
 
+adminAuthRouter.post(
+  "/changePassword",
+  limiter,
+  verifyAdminToken,
+  adminAuthController.changePassword
+);
+
 
 
 module.exports = adminAuthRouter;

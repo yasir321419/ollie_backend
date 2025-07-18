@@ -87,10 +87,44 @@ const editImage = async (req, res, next) => {
   }
 }
 
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentpassword, newpassword } = req.body;
+    const { id, password } = req.user;
+
+    const comparePass = await comparePassword(currentpassword, password);
+
+    if (!comparePass) {
+      throw new BadRequestError("current password not correct")
+    }
+
+    const hashpass = await hashPassword(newpassword);
+
+    const changePass = await prisma.admin.update({
+      where: {
+        id: id
+      },
+      data: {
+        password: hashpass
+      }
+    });
+
+    if (!changePass) {
+      throw new ValidationError("password not change")
+    }
+
+    handlerOk(res, 200, changePass, "password changed successfully");
+
+  } catch (error) {
+    next(error)
+  }
+}
+
 
 
 
 module.exports = {
   adminLogin,
-  editImage
+  editImage,
+  changePassword
 }
