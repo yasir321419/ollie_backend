@@ -8,25 +8,25 @@ const { verifyAdminToken } = require("../../middleware/auth");
 const { adminCreatePrivacyPolicySchema, adminUpdatePrivacyPolicySchema, adminCreateTermsConditionSchema, adminUpdateTermsConditionSchema, adminCreateFaqsSchema, adminUpdateFaqsSchema, adminDeleteFaqsSchema } = require("../../schema/admin/content");
 
 adminContentRouter.get("/showAllUsers",
-  limiter,
+  // limiter,
   verifyAdminToken,
   adminContentController.showAllUsers
 );
 
 adminContentRouter.get("/countUsers",
-  limiter,
+  // limiter,
   verifyAdminToken,
   adminContentController.countUsers
 );
 
 adminContentRouter.get("/androidUsers",
-  limiter,
+  // limiter,
   verifyAdminToken,
   adminContentController.androidUsers
 );
 
 adminContentRouter.get("/iosUsers",
-  limiter,
+  // limiter,
   verifyAdminToken,
   adminContentController.iosUsers
 );
