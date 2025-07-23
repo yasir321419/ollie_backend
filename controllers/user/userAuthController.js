@@ -69,6 +69,59 @@ const getInterest = async (req, res, next) => {
     }
 }
 
+const resendOtp = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+
+        // Find the user by email
+        const user = await prisma.user.findUnique({
+            where: {
+                email, // Assuming 'email' is a unique field in the User model
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundError("User not found");
+        }
+
+        // Find existing OTP record by userId and otpUsed = false
+        const existingOtp = await prisma.otp.findFirst({
+            where: {
+                userId: user.id,
+                otpUsed: false,
+            },
+        });
+
+        if (!existingOtp) {
+            throw new NotFoundError("OTP Record Not Found or Already Used");
+        }
+
+
+        const otp = generateOtp();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+        await prisma.otp.update({
+            where: { id: existingOtp.id },
+            data: {
+                otp,
+                otpUsed: false,
+                expiresAt,
+            },
+        });
+
+        const emailData = {
+            subject: "ForgetMeNot - Account Verification",
+            html: emailTemplates.resendOTP(otp),
+        };
+
+        await sendEmails(email, emailData.subject, emailData.html);
+
+        handlerOk(res, 201, otp, "OTP sent successfully. Now verify your OTP.");
+    } catch (error) {
+        next(error);
+    }
+};
+
 const userVerifyOtp = async (req, res, next) => {
     try {
         const {
@@ -520,6 +573,7 @@ module.exports = {
     userResetPassword,
     userEditProfile,
     userLogOut,
-    userDeleteAccount
+    userDeleteAccount,
+    resendOtp
 
 }

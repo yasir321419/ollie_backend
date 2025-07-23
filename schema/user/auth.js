@@ -75,11 +75,22 @@ const userEditProfileSchema = Joi.object({
   }),
 });
 
+const userResendOtpSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({}),
+  body: Joi.object({
+
+    email: Joi.string().required()
+
+  }),
+});
+
 module.exports = {
   userRegisterSchema,
   userVerifyOtpSchema,
   userForgetPasswordSchema,
   userResetPasswordSchema,
   userLoginSchema,
-  userEditProfileSchema
+  userEditProfileSchema,
+  userResendOtpSchema
 }
