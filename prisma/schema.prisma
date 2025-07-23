@@ -284,7 +284,6 @@ model User {
   tasks                  Task[]
   likes                  Like[]
   comments               Comment[]
-  // otp                    Otp[]     @relation
   savedBlogs             SavedBlog[]
   savedTopics            SavedTopic[]
   interests              Interest[] @relation("UserInterests")
@@ -325,8 +324,6 @@ model User {
 model Otp {
   id         String       @id @default(uuid())
   otp        String    @unique
-  // user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // userId     String?
   email      String? 
   otpReason  otpReason
   expiresAt  DateTime

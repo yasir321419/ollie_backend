@@ -29,12 +29,15 @@ const userRegister = async (req, res, next) => {
 
         const otp = generateOtp();
         const expiretime = generateOtpExpiry(1);
+
         console.log(otp, 'otp');
+        console.log(expiretime, 'expiretime');
 
         const saveotp = await prisma.otp.create({
             data: {
+                email: userEmail,
                 otp: otp,
-                userId: null,
+                // userId: null,
                 otpReason: otpConstants.REGISTER,
                 otpUsed: false,
                 expiresAt: expiretime
@@ -68,6 +71,154 @@ const getInterest = async (req, res, next) => {
         next(error)
     }
 }
+
+const createProfile = async (req, res, next) => {
+    try {
+        const { email } = req.user;
+
+        const {
+            userPhoneNumber,
+            userFirstName,
+            userLastName,
+            userDateOfBirth,
+            userGender,
+            interest, // Array of interests selected by the user
+            userDeviceToken,
+            userDeviceType,
+            emergencyContactNumber,
+            wantDailyActivities,
+            wantDailySupplement,
+            userCity,
+            userStates,
+            userCountry,
+        } = req.body;
+
+        // ✅ Validate interests exist
+        const validInterestRecords = await prisma.interest.findMany({
+            where: {
+                id: { in: interest }
+            },
+            select: { id: true }
+        });
+
+        const validInterestIds = validInterestRecords.map(i => i.id);
+        const missingIds = interest.filter(id => !validInterestIds.includes(id));
+
+        if (missingIds.length > 0) {
+            throw new NotFoundError(`Invalid interest IDs: ${missingIds.join(', ')}`);
+        }
+
+        const dob = new Date(userDateOfBirth);
+
+        // ✅ Create the user
+        const saveuser = await prisma.user.update({
+            where: {
+                email
+            },
+            data: {
+                phoneNumber: userPhoneNumber,
+                firstName: userFirstName,
+                lastName: userLastName,
+                dateOfBirth: dob,
+                deviceToken: userDeviceToken,
+                deviceType: userDeviceType,
+                gender: userGender,
+                userType: userConstants.USER,
+                emergencyContactNumber,
+                wantDailyActivities,
+                wantDailySupplement,
+                city: userCity,
+                states: userStates,
+                country: userCountry,
+                isCreatedProfile: true,
+                interests: {
+                    connect: validInterestIds.map(id => ({ id }))
+                }
+            },
+            include: {
+                interests: true
+            }
+        });
+
+        // ✅ Mark OTP as used
+        const otpRecord = await prisma.otp.findFirst({
+            where: {
+                email: email
+            }
+        });
+
+        if (!otpRecord) {
+            throw new NotFoundError("OTP not found");
+        }
+
+        await prisma.otp.update({
+            where: {
+                id: otpRecord.id,  // Use the id of the found OTP record
+            },
+            data: {
+                otpUsed: true,
+            },
+        });
+
+        // Create Wallet with 0 balance
+        await prisma.wallet.create({
+            data: {
+                userId: saveuser.id,
+                balance: 0.0
+            }
+        });
+
+        // Give 50 initial connects
+        await prisma.connectPurchase.create({
+            data: {
+                userId: saveuser.id,
+                quantity: 50
+            }
+        });
+
+        // ✅ Assign Free subscription plan
+        let freePlan = await prisma.subscriptionPlan.findUnique({
+            where: { name: 'Free' }
+        });
+
+        // Auto-create Free plan if not exists
+        if (!freePlan) {
+            freePlan = await prisma.subscriptionPlan.create({
+                data: {
+                    name: 'Free',
+                    price: 0.0,
+                    duration: 1 // month
+                }
+            });
+        }
+
+        const now = new Date();
+        const expiry = new Date();
+        expiry.setMonth(expiry.getMonth() + 1); // Set expiry to 1 month later
+
+        await prisma.userSubscription.create({
+            data: {
+                userId: saveuser.id,
+                subscriptionPlanId: freePlan.id,
+                startDate: now,
+                endDate: expiry,
+                isActive: true
+            }
+        });
+
+        // Generate token
+        const token = genToken({
+            id: saveuser.id,
+            userType: userConstants.USER,
+        });
+
+        return handlerOk(res, 201, { ...saveuser, userToken: token }, "Profile Created successfully");
+
+    } catch (error) {
+        next(error)
+    }
+}
+
 
 const resendOtp = async (req, res, next) => {
     try {
@@ -126,22 +277,22 @@ const userVerifyOtp = async (req, res, next) => {
     try {
         const {
             userEmail,
-            userPhoneNumber,
-            userFirstName,
-            userLastName,
-            userDateOfBirth,
-            userGender,
-            interest, // Array of interests selected by the user
+            // userPhoneNumber,
+            // userFirstName,
+            // userLastName,
+            // userDateOfBirth,
+            // userGender,
+            // interest, // Array of interests selected by the user
             otp,
             userPassword,
-            userDeviceToken,
-            userDeviceType,
-            emergencyContactNumber,
-            wantDailyActivities,
-            wantDailySupplement,
-            userCity,
-            userStates,
-            userCountry,
+            // userDeviceToken,
+            // userDeviceType,
+            // emergencyContactNumber,
+            // wantDailyActivities,
+            // wantDailySupplement,
+            // userCity,
+            // userStates,
+            // userCountry,
         } = req.body;
 
         // ✅ Find OTP
@@ -168,49 +319,49 @@ const userVerifyOtp = async (req, res, next) => {
                 throw new ConflictError("OTP already used");
             }
 
-            const dob = new Date(userDateOfBirth);
+            // const dob = new Date(userDateOfBirth);
 
             // ✅ Validate interests exist
-            const validInterestRecords = await prisma.interest.findMany({
-                where: {
-                    id: { in: interest }
-                },
-                select: { id: true }
-            });
+            // const validInterestRecords = await prisma.interest.findMany({
+            //     where: {
+            //         id: { in: interest }
+            //     },
+            //     select: { id: true }
+            // });
 
-            const validInterestIds = validInterestRecords.map(i => i.id);
-            const missingIds = interest.filter(id => !validInterestIds.includes(id));
+            // const validInterestIds = validInterestRecords.map(i => i.id);
+            // const missingIds = interest.filter(id => !validInterestIds.includes(id));
 
-            if (missingIds.length > 0) {
-                throw new NotFoundError(`Invalid interest IDs: ${missingIds.join(', ')}`);
-            }
+            // if (missingIds.length > 0) {
+            //     throw new NotFoundError(`Invalid interest IDs: ${missingIds.join(', ')}`);
+            // }
 
             // ✅ Create the user
             const saveuser = await prisma.user.create({
                 data: {
                     email: userEmail,
                     password: hashedPassword,
-                    phoneNumber: userPhoneNumber,
-                    firstName: userFirstName,
-                    lastName: userLastName,
-                    dateOfBirth: dob,
-                    deviceToken: userDeviceToken,
-                    deviceType: userDeviceType,
-                    gender: userGender,
-                    userType: userConstants.USER,
-                    emergencyContactNumber,
-                    wantDailyActivities,
-                    wantDailySupplement,
-                    city: userCity,
-                    states: userStates,
-                    country: userCountry,
-                    interests: {
-                        connect: validInterestIds.map(id => ({ id }))
-                    }
+                    // phoneNumber: userPhoneNumber,
+                    // firstName: userFirstName,
+                    // lastName: userLastName,
+                    // dateOfBirth: dob,
+                    // deviceToken: userDeviceToken,
+                    // deviceType: userDeviceType,
+                    // gender: userGender,
+                    userType: userConstants.USER
+                    // emergencyContactNumber,
+                    // wantDailyActivities,
+                    // wantDailySupplement,
+                    // city: userCity,
+                    // states: userStates,
+                    // country: userCountry,
+                    // interests: {
+                    //     connect: validInterestIds.map(id => ({ id }))
+                    // }
                 },
-                include: {
-                    interests: true
-                }
+                // include: {
+                //     interests: true
+                // }
             });
 
             // ✅ Mark OTP as used
@@ -220,58 +371,58 @@ const userVerifyOtp = async (req, res, next) => {
                 },
                 data: {
                     otpUsed: true,
-                    userId: saveuser.id,
+                    // userId: saveuser.id,
                 },
             });
 
-            // Create Wallet with 0 balance
+            // // Create Wallet with 0 balance
 
-            await prisma.wallet.create({
-                data: {
-                    userId: saveuser.id,
-                    balance: 0.0
-                }
-            })
+            // await prisma.wallet.create({
+            //     data: {
+            //         userId: saveuser.id,
+            //         balance: 0.0
+            //     }
+            // })
 
-            // Give 10 initial connects
+            // // Give 10 initial connects
 
-            await prisma.connectPurchase.create({
-                data: {
-                    userId: saveuser.id,
-                    quantity: 50
-                }
-            });
+            // await prisma.connectPurchase.create({
+            //     data: {
+            //         userId: saveuser.id,
+            //         quantity: 50
+            //     }
+            // });
 
-            // ✅ Assign Free subscription plan
-            let freePlan = await prisma.subscriptionPlan.findUnique({
-                where: { name: 'Free' }
-            });
+            // // ✅ Assign Free subscription plan
+            // let freePlan = await prisma.subscriptionPlan.findUnique({
+            //     where: { name: 'Free' }
+            // });
 
-            // Auto-create Free plan if not exists
-            if (!freePlan) {
-                freePlan = await prisma.subscriptionPlan.create({
-                    data: {
-                        name: 'Free',
-                        price: 0.0,
-                        duration: 1 // month
-                    }
-                });
-            }
+            // // Auto-create Free plan if not exists
+            // if (!freePlan) {
+            //     freePlan = await prisma.subscriptionPlan.create({
+            //         data: {
+            //             name: 'Free',
+            //             price: 0.0,
+            //             duration: 1 // month
+            //         }
+            //     });
+            // }
 
-            const now = new Date();
-            const expiry = new Date();
-            expiry.setMonth(expiry.getMonth() + 1); // Set expiry to 1 month later
+            // const now = new Date();
+            // const expiry = new Date();
+            // expiry.setMonth(expiry.getMonth() + 1); // Set expiry to 1 month later
 
 
-            await prisma.userSubscription.create({
-                data: {
-                    userId: saveuser.id,
-                    subscriptionPlanId: freePlan.id,
-                    startDate: now,
-                    endDate: expiry,
-                    isActive: true
-                }
-            });
+            // await prisma.userSubscription.create({
+            //     data: {
+            //         userId: saveuser.id,
+            //         subscriptionPlanId: freePlan.id,
+            //         startDate: now,
+            //         endDate: expiry,
+            //         isActive: true
+            //     }
+            // });
 
             // Generate token
             const token = genToken({
@@ -574,6 +725,7 @@ module.exports = {
     userEditProfile,
     userLogOut,
     userDeleteAccount,
-    resendOtp
+    resendOtp,
+    createProfile
 
 }

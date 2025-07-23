@@ -4,7 +4,8 @@ const userRegisterSchema = Joi.object({
   query: Joi.object({}),
   params: Joi.object({}),
   body: Joi.object({
-    userEmail: Joi.string().required()
+    userEmail: Joi.string().required(),
+    // userPassword: Joi.string().required()
   }),
 });
 
@@ -85,6 +86,29 @@ const userResendOtpSchema = Joi.object({
   }),
 });
 
+const createProfileSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({}),
+  body: Joi.object({
+
+    userPhoneNumber: Joi.string().required(),
+    userFirstName: Joi.string().required(),
+    userLastName: Joi.string().required(),
+    userDateOfBirth: Joi.date().required(),
+    userGender: Joi.string().valid("MALE", "FEMALE").required(),
+    interest: Joi.array().items(Joi.string()).required(),
+    userDeviceType: Joi.valid("ANDROID", "IOS").required(),
+    userDeviceToken: Joi.string().required(),
+    emergencyContactNumber: Joi.string().required(),
+    wantDailyActivities: Joi.boolean().required(),
+    wantDailySupplement: Joi.boolean().required(),
+    userCity: Joi.string().required(),
+    userStates: Joi.string().required(),
+    userCountry: Joi.string().required()
+
+  }),
+})
+
 module.exports = {
   userRegisterSchema,
   userVerifyOtpSchema,
@@ -92,5 +116,6 @@ module.exports = {
   userResetPasswordSchema,
   userLoginSchema,
   userEditProfileSchema,
-  userResendOtpSchema
+  userResendOtpSchema,
+  createProfileSchema
 }
