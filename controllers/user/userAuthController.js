@@ -219,7 +219,6 @@ const createProfile = async (req, res, next) => {
     }
 }
 
-
 const resendOtp = async (req, res, next) => {
     try {
         const { email } = req.body;
