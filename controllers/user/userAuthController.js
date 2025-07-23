@@ -224,29 +224,17 @@ const resendOtp = async (req, res, next) => {
     try {
         const { email } = req.body;
 
-        // Find the user by email
-        const user = await prisma.user.findUnique({
-            where: {
-                email, // Assuming 'email' is a unique field in the User model
-            },
-        });
-
-        if (!user) {
-            throw new NotFoundError("User not found");
-        }
-
-        // Find existing OTP record by userId and otpUsed = false
+        // Find existing OTP record by email (not user)
         const existingOtp = await prisma.otp.findFirst({
             where: {
-                userId: user.id,
+                email,
                 otpUsed: false,
             },
         });
 
         if (!existingOtp) {
-            throw new NotFoundError("OTP Record Not Found or Already Used");
+            throw new NotFoundError("OTP Record Not Found");
         }
-
 
         const otp = generateOtp();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
@@ -261,7 +249,7 @@ const resendOtp = async (req, res, next) => {
         });
 
         const emailData = {
-            subject: "ForgetMeNot - Account Verification",
+            subject: "Ollie - Account Verification",
             html: emailTemplates.resendOTP(otp),
         };
 
@@ -455,7 +443,7 @@ const userVerifyOtp = async (req, res, next) => {
                 },
                 data: {
                     otpUsed: true,
-                    userId: finduser.id,
+                    // userId: finduser.id,
                 },
             });
 
