@@ -76,7 +76,6 @@ userAuthRouter.delete(
 userAuthRouter.post(
   "/resendOtp",
   limiter,
-  verifyUserToken,
   validateRequest(userResendOtpSchema),
   userAuthController.resendOtp
 );
