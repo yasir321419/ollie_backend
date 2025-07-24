@@ -480,8 +480,9 @@ const userForgetPassword = async (req, res, next) => {
 
         const saveotp = await prisma.otp.create({
             data: {
+                email: userEmail,
                 otp: otp,
-                userId: finduser.id,
+                // userId: finduser.id,
                 otpReason: otpConstants.FORGETPASSWORD,
                 otpUsed: false,
                 expiresAt: expiretime
