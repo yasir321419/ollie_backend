@@ -28,7 +28,8 @@ const userRegister = async (req, res, next) => {
 
 
         const otp = generateOtp();
-        const expiretime = generateOtpExpiry(1);
+        const expiretime = generateOtpExpiry(2);
+        console.log(expiretime);
 
         console.log(otp, 'otp');
         console.log(expiretime, 'expiretime');
@@ -475,7 +476,7 @@ const userForgetPassword = async (req, res, next) => {
         }
 
         const otp = generateOtp();
-        const expiretime = generateOtpExpiry(1);
+        const expiretime = generateOtpExpiry(2);
 
 
         const saveotp = await prisma.otp.create({
