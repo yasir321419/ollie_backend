@@ -76,7 +76,7 @@ const getInterest = async (req, res, next) => {
 const createProfile = async (req, res, next) => {
     try {
         const { email } = req.user;
-
+        const { id } = req.user;
         const {
             userPhoneNumber,
             userFirstName,
@@ -93,6 +93,19 @@ const createProfile = async (req, res, next) => {
             userStates,
             userCountry,
         } = req.body;
+
+
+
+        const existprofile = await prisma.user.findFirst({
+            where: {
+                id,
+                isCreatedProfile: true
+            }
+        });
+
+        if (existprofile) {
+            throw new ConflictError("user profile exist already exist")
+        }
 
         // ✅ Validate interests exist
         const validInterestRecords = await prisma.interest.findMany({
