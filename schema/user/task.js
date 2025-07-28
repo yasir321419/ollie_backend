@@ -6,7 +6,9 @@ const userCreateTaskSchema = Joi.object({
   body: Joi.object({
     taskName: Joi.string().required(),
     taskDescription: Joi.string().required(),
-    dateAndTime: Joi.date().required(),
+    date: Joi.date().required(),
+    time: Joi.string().required(),
+
   }),
 });
 

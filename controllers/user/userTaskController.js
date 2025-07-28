@@ -1,5 +1,5 @@
 const prisma = require("../../config/prismaConfig");
-const { ValidationError, NotFoundError } = require("../../resHandler/CustomError");
+const { ValidationError, NotFoundError, BadRequestError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
 const checkAndDeductUserCredit = require("../../utils/checkConnects");
 const checkUserSubscription = require("../../utils/checkSubscription");
@@ -7,38 +7,55 @@ const sendNotification = require("../../utils/notification");
 
 const createUserTask = async (req, res, next) => {
   try {
-    const { taskName, taskDescription, dateAndTime } = req.body;
+    const { taskName, taskDescription, date, time } = req.body; // Date and Time as separate fields
     const { id, deviceToken, firstName } = req.user;
 
-    await checkUserSubscription(id, "your package has expired Upgrade your plan to create the task");
-    await checkAndDeductUserCredit(id, "you have no credits left to create the task");
+    // Validate if the date and time are provided
+    if (!date || !time) {
+      throw new BadRequestError("Date and Time are required.");
+    }
 
+    // Convert date to DateTime format (e.g., "2025-05-12")
+    const scheduledDate = new Date(date);  // Assuming date is in 'YYYY-MM-DD' format
+
+    // Validate time format (accept HH:mm:ss format)
+    const timeFormat = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
+    if (!timeFormat.test(time)) {
+      throw new BadRequestError("Invalid time format. Use 'HH:mm:ss' format.");
+    }
+
+    // Combine date and time into a valid DateTime object
+    const scheduledTime = `${scheduledDate.toISOString().split('T')[0]}T${time}:00.000Z`;
+
+    // Check the user's subscription status and credits
+    await checkUserSubscription(id, "Your package has expired. Upgrade your plan to create the task.");
+    await checkAndDeductUserCredit(id, "You have no credits left to create the task.");
+
+    // Create the task with separate date and time
     const createtask = await prisma.task.create({
       data: {
         taskName: taskName,
         taskDescription: taskDescription,
-        scheduledAt: dateAndTime,
-        userId: id
+        scheduledDate: scheduledDate,  // Store Date separately
+        scheduledTime: time,           // Store Time separately
+        userId: id,
       }
     });
 
+    // Check if the task creation was successful
     if (!createtask) {
-      throw new ValidationError("user task not create")
+      throw new ValidationError("User task not created");
     }
 
-
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have created a task titled "${taskName}".`
-    // );
-
-    handlerOk(res, 200, createtask, 'user task created successfully')
-
+    // Send response to frontend
+    handlerOk(res, 200, createtask, "User task created successfully");
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+
+
 
 const getUserTask = async (req, res, next) => {
   try {

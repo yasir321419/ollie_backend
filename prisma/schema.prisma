@@ -337,7 +337,8 @@ model Task {
   id              String      @id @default(uuid())
   taskName        String
   taskDescription String?
-  scheduledAt     DateTime
+  scheduledDate     DateTime
+  scheduledTime   String
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   markAsComplete  Boolean  @default(false)
