@@ -152,8 +152,8 @@ const getTaskByDate = async (req, res, next) => {
 
     const tasks = await Promise.all([
       prisma.task.findMany({
-        where: { userId: id, scheduledAt: { gte: startDate, lte: endDate } },
-        orderBy: { scheduledAt: "asc" },
+        where: { userId: id, scheduledDate: { gte: startDate, lte: endDate } },
+        orderBy: { scheduledDate: "asc" },
         skip,
         take: limit,
       })
