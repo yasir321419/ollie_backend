@@ -80,7 +80,7 @@ const getAllLatestBlog = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     await checkUserSubscription(id, "your package has expired Upgrade your plan to read the latest blog");
-    await checkAndDeductUserCredit(id, "you have no credits left to read latest blogs");
+    // await checkAndDeductUserCredit(id, "you have no credits left to read latest blogs");
 
     const findlatestblog = await Promise.all([
       prisma.blog.findMany({
@@ -566,7 +566,7 @@ const getBlogByType = async (req, res, next) => {
 
 
     await checkUserSubscription(id, "your package has expired Upgrade your plan to read the blog");
-    await checkAndDeductUserCredit(id, "you have no credits left to show blog");
+    // await checkAndDeductUserCredit(id, "you have no credits left to show blog");
 
     const { type } = req.query;
 
