@@ -102,12 +102,11 @@ const getAllLatestBlog = async (req, res, next) => {
     if (findlatestblog.length === 0) {
       throw new NotFoundError("blogs not found")
     }
-
-
+    const [blogs, totalCount] = findlatestblog;
     handlerOk(
       res,
       200,
-      findlatestblog,
+      { blogs, totalCount },
       'Latest blogs found successfully',
     );
   } catch (error) {
