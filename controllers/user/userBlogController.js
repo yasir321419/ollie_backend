@@ -59,11 +59,12 @@ const getAllBlogByTopics = async (req, res, next) => {
     if (findblogbytopics.length === 0) {
       throw new NotFoundError("blogs not found")
     }
+    const [blogs, totalCount] = findblogbytopics;
 
     handlerOk(
       res,
       200,
-      findblogbytopics, // <-- array only
+      { blogs, totalCount }, // <-- array only
       "Blogs found successfully",
     );
 
@@ -136,6 +137,14 @@ const getSingleBlog = async (req, res, next) => {
         _count: {
           select: { likes: true, comments: true },
         },
+        likes: {
+          where: {
+            userId: id
+          },
+          select: {
+            id: true
+          }
+        }
       },
     });
 
@@ -143,7 +152,11 @@ const getSingleBlog = async (req, res, next) => {
       throw new NotFoundError("Blog not found");
     }
 
-    handlerOk(res, 200, blog, "Blog found and view count incremented");
+    // Check if the user has liked the blog
+
+    const isLiked = blog.likes.length > 0;
+
+    handlerOk(res, 200, { ...blog, isLiked }, "Blog found and view count incremented");
   } catch (error) {
     next(error);
   }
