@@ -78,7 +78,7 @@ userBlogRouter.post(
 );
 
 userBlogRouter.get(
-  "/getCommentsLikeReply",
+  "/getCommentsLikeReply/:postId",
   limiter,
   verifyUserToken,
   userBlogController.getCommentsLikeReply

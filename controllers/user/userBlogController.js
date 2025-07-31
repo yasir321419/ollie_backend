@@ -517,44 +517,111 @@ const likeAndReplyOnComment = async (req, res, next) => {
 };
 
 
+// const getCommentsLikeReply = async (req, res, next) => {
+//   try {
+//     const comments = await prisma.comment.findMany({
+//       where: {
+//         parentId: null
+//       },
+//       include: {
+//         user: true,
+//         replies: {
+//           include: {
+//             user: true,
+//             replies: {
+//               include: {
+//                 user: true,
+//                 replies: {
+//                   include: {
+//                     user: true
+//                   }
+//                 }
+//               }
+//             }
+//           }
+//         }
+//       },
+//       orderBy: {
+//         createdAt: "desc"
+//       }
+//     });
+
+//     // Helper to recursively add likeCount to comments and replies
+//     const addLikeCounts = async (comments) => {
+//       return Promise.all(comments.map(async (comment) => {
+//         const likeCount = await prisma.commentLike.count({
+//           where: { commentId: comment.id }
+//         });
+
+//         comment.likeCount = likeCount;
+
+//         if (comment.replies && comment.replies.length > 0) {
+//           comment.replies = await addLikeCounts(comment.replies);
+//         }
+
+//         return comment;
+//       }));
+//     };
+
+//     const commentsWithCounts = await addLikeCounts(comments);
+
+//     handlerOk(res, 200, commentsWithCounts, "All comments with nested replies and like counts retrieved successfully");
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
 const getCommentsLikeReply = async (req, res, next) => {
   try {
+    const { postId } = req.params; // Get the postId from request parameters
+
+
+    const findpost = await prisma.blog.findUnique({
+      where: {
+        id: postId
+      }
+    });
+
+    if (!findpost) {
+      throw new NotFoundError("post not found")
+    }
+
+    // Fetch comments for a particular blog post (including replies)
     const comments = await prisma.comment.findMany({
       where: {
-        parentId: null
+        blogId: findpost.id, // Filter comments for the given blog post
+        parentId: null, // Only get root comments, not replies
       },
       include: {
-        user: true,
+        user: true, // Include the user who posted the comment
         replies: {
           include: {
-            user: true,
+            user: true, // Include the user who posted the reply
             replies: {
               include: {
-                user: true,
-                replies: {
-                  include: {
-                    user: true
-                  }
-                }
+                user: true, // Include the user for nested replies
               }
             }
           }
         }
       },
       orderBy: {
-        createdAt: "desc"
+        createdAt: "desc" // Order comments by creation date
       }
     });
 
-    // Helper to recursively add likeCount to comments and replies
+    // Helper function to recursively add likeCount to comments and replies
     const addLikeCounts = async (comments) => {
       return Promise.all(comments.map(async (comment) => {
+        // Get the like count for each comment
         const likeCount = await prisma.commentLike.count({
           where: { commentId: comment.id }
         });
 
-        comment.likeCount = likeCount;
+        comment.likeCount = likeCount; // Add like count to comment
 
+        // Recursively add like counts for replies if they exist
         if (comment.replies && comment.replies.length > 0) {
           comment.replies = await addLikeCounts(comment.replies);
         }
@@ -563,6 +630,7 @@ const getCommentsLikeReply = async (req, res, next) => {
       }));
     };
 
+    // Add like counts to comments and replies
     const commentsWithCounts = await addLikeCounts(comments);
 
     handlerOk(res, 200, commentsWithCounts, "All comments with nested replies and like counts retrieved successfully");
