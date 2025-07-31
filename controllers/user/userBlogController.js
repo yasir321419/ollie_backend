@@ -144,6 +144,14 @@ const getSingleBlog = async (req, res, next) => {
           select: {
             id: true
           }
+        },
+        savedByUsers: {
+          where: {
+            userId: id
+          },
+          select: {
+            id: true
+          }
         }
       },
     });
@@ -155,8 +163,10 @@ const getSingleBlog = async (req, res, next) => {
     // Check if the user has liked the blog
 
     const isLiked = blog.likes.length > 0;
+    const isSaveBlog = blog.savedByUsers.length > 0;
 
-    handlerOk(res, 200, { ...blog, isLiked }, "Blog found and view count incremented");
+
+    handlerOk(res, 200, { ...blog, isLiked, isSaveBlog }, "Blog found and view count incremented");
   } catch (error) {
     next(error);
   }
@@ -575,7 +585,7 @@ const likeAndReplyOnComment = async (req, res, next) => {
 const getCommentsLikeReply = async (req, res, next) => {
   try {
     const { postId } = req.params; // Get the postId from request parameters
-
+    const { id } = req.user;
 
     const findpost = await prisma.blog.findUnique({
       where: {
@@ -584,7 +594,7 @@ const getCommentsLikeReply = async (req, res, next) => {
     });
 
     if (!findpost) {
-      throw new NotFoundError("post not found")
+      throw new NotFoundError("Post not found");
     }
 
     // Fetch comments for a particular blog post (including replies)
@@ -604,12 +614,27 @@ const getCommentsLikeReply = async (req, res, next) => {
               }
             }
           }
+        },
+        likes: {
+          where: {
+            userId: id
+          },
+          select: {
+            id: true
+          }
         }
       },
       orderBy: {
         createdAt: "desc" // Order comments by creation date
       }
     });
+
+    // Ensure likes is always an array
+    comments.forEach(comment => {
+      comment.likes = comment.likes || []; // If likes are not found, initialize as an empty array
+    });
+
+    const isLiked = comments.some(comment => comment.likes.length > 0);
 
     // Helper function to recursively add likeCount to comments and replies
     const addLikeCounts = async (comments) => {
@@ -633,11 +658,14 @@ const getCommentsLikeReply = async (req, res, next) => {
     // Add like counts to comments and replies
     const commentsWithCounts = await addLikeCounts(comments);
 
-    handlerOk(res, 200, commentsWithCounts, "All comments with nested replies and like counts retrieved successfully");
+    // Return comments directly, without nesting under "comments"
+    handlerOk(res, 200, { commentsWithCounts, isLiked }, "All comments with nested replies and like counts retrieved successfully");
   } catch (error) {
     next(error);
   }
 };
+
+
 
 
 const getBlogByType = async (req, res, next) => {
@@ -663,6 +691,14 @@ const getBlogByType = async (req, res, next) => {
           category: true,
           admin: true,
           _count: { select: { likes: true, comments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
         }
       });
     } else if (type === "trending") {
@@ -676,6 +712,14 @@ const getBlogByType = async (req, res, next) => {
           category: true,
           admin: true,
           _count: { select: { likes: true, comments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
         }
       });
     } else if (type === "recent") {
@@ -687,6 +731,14 @@ const getBlogByType = async (req, res, next) => {
           category: true,
           admin: true,
           _count: { select: { likes: true, comments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
         }
       });
     } else {
@@ -697,7 +749,10 @@ const getBlogByType = async (req, res, next) => {
       throw new NotFoundError("No blog found for this type");
     }
 
-    handlerOk(res, 200, blog, `${type} blog found successfully`);
+    const isSaveBlog = blog.savedByUsers.length > 0;
+
+
+    handlerOk(res, 200, { blog, isSaveBlog }, `${type} blog found successfully`);
   } catch (error) {
     next(error);
   }
