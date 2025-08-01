@@ -15,6 +15,9 @@ const showLatestEvent = async (req, res, next) => {
         eventStates: states,
         eventCity: city,
       },
+      // include: {
+      //   eventParticipants: true
+      // },
       orderBy: {
         createdAt: "desc"
       }
@@ -46,6 +49,14 @@ const showAllEventNearBy = async (req, res, next) => {
           eventStates: states,
           eventCity: city
         },
+        // include: {
+        //   eventParticipants: {
+        //     some: {
+        //       userId: id,
+        //       isMark: true
+        //     }
+        //   }
+        // },
         skip,
         take: limit,
         orderBy: {
@@ -112,7 +123,8 @@ const markAsGoing = async (req, res, next) => {
       data: {
         eventParticipant: {
           increment: 1
-        }
+        },
+        isMark: true
       }
     });
 
