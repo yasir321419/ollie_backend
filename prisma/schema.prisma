@@ -469,7 +469,6 @@ model Event {
   eventCountry       String
   eventParticipant   Int                 @default(0)
   image              String?
-  isMark   Boolean @default(false)
 
   createdById        String
   createdBy          Admin               @relation(fields: [createdById], references: [id])
@@ -488,6 +487,8 @@ model EventParticipant {
   event     Event    @relation(fields: [eventId], references: [id])
   eventId   String
   markedAt  DateTime @default(now())
+    isMark             Boolean @default(false)
+
   @@unique([userId, eventId]) // ✅ Prevents duplicate "going" marks
 }
 

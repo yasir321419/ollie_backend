@@ -5,80 +5,109 @@ const sendNotification = require("../../utils/notification");
 
 const showLatestEvent = async (req, res, next) => {
   try {
-    const { city, country, states } = req.user;
+    const { city, country, states, id } = req.user;
 
     console.log(city, country, states);
 
+    // Find the latest event based on the location and check participation
     const findlatestevent = await prisma.event.findFirst({
       where: {
         eventCountry: country,
         eventStates: states,
         eventCity: city,
       },
-      // include: {
-      //   eventParticipants: true
-      // },
+      include: {
+        eventParticipants: {
+          where: {
+            userId: id,  // Filter by the user's ID
+            isMark: true      // Ensure the user is marked as participating
+          },
+          select: {
+            isMark: true      // Only include the `isMark` field for the current user
+          }
+        }
+      },
       orderBy: {
-        createdAt: "desc"
+        createdAt: "desc"  // Order by the most recent event
       }
     });
 
+    // If no event is found or the user is not marked as participating, return an error
     if (!findlatestevent) {
-      throw new NotFoundError("latest event not found")
+      throw new NotFoundError("Latest event not found or user is not marked as participating");
     }
 
+    // We now have the event data and the participation status (isMark)
+    const eventData = {
+      ...findlatestevent,
+      // isMark: findlatestevent.eventParticipants[0].isMark  // Set the `isMark` flag from the first participant
 
-    handlerOk(res, 200, findlatestevent, 'latest event found successfully');
+      isMark: findlatestevent.eventParticipants[0] ? findlatestevent.eventParticipants[0].isMark : false
+    };
+
+    handlerOk(res, 200, eventData, 'Latest event found successfully');
   } catch (error) {
-    next(error)
+    next(error);  // Pass the error to the next middleware
   }
-}
+};
+
+
+
+
 
 const showAllEventNearBy = async (req, res, next) => {
   try {
-    const { city, country, states } = req.user;
+    const { city, country, states, id } = req.user;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-
-    const findalleventnearbyme = await Promise.all([
-      prisma.event.findMany({
-        where: {
-          eventCountry: country,
-          eventStates: states,
-          eventCity: city
-        },
-        // include: {
-        //   eventParticipants: {
-        //     some: {
-        //       userId: id,
-        //       isMark: true
-        //     }
-        //   }
-        // },
-        skip,
-        take: limit,
-        orderBy: {
-          createdAt: "desc"
+    // Find all events near the user based on location
+    const findalleventnearbyme = await prisma.event.findMany({
+      where: {
+        eventCountry: country,
+        eventStates: states,
+        eventCity: city,
+      },
+      include: {
+        eventParticipants: {
+          where: {
+            userId: id,  // Filter by the user's ID
+            isMark: true  // Ensure the user is marked as participating
+          },
+          select: {
+            isMark: true  // Only include the `isMark` field for the current user
+          }
         }
-      })
-    ])
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: "desc"  // Order by the most recent event
+      }
+    });
 
     if (findalleventnearbyme.length === 0) {
-      throw new NotFoundError("events not found")
+      throw new NotFoundError("Events not found");
     }
+
+    // Map through the events and add `isMark` status for each event
+    const eventData = findalleventnearbyme.map(event => ({
+      ...event,
+      isMark: event.eventParticipants.length > 0 ? event.eventParticipants[0].isMark : false  // Check if the user is marked as participating
+    }));
 
     handlerOk(
       res,
       200,
-      findalleventnearbyme,
-      'events near by found successfully'
+      eventData,
+      'Events nearby found successfully'
     );
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
 
 const markAsGoing = async (req, res, next) => {
   try {
@@ -112,7 +141,8 @@ const markAsGoing = async (req, res, next) => {
     await prisma.eventParticipant.create({
       data: {
         userId: id,
-        eventId: findevent.id
+        eventId: findevent.id,
+        isMark: true
       }
     });
 
@@ -124,7 +154,6 @@ const markAsGoing = async (req, res, next) => {
         eventParticipant: {
           increment: 1
         },
-        isMark: true
       }
     });
 
