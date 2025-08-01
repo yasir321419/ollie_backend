@@ -553,6 +553,14 @@ const getCommentsLikeReply = async (req, res, next) => {
         replies: {
           include: {
             user: true, // Include the user who posted the reply
+            likes: { // Include likes for replies
+              where: {
+                userId: id
+              },
+              select: {
+                id: true
+              }
+            },
             replies: {
               include: {
                 user: true, // Include the user for nested replies
@@ -574,7 +582,7 @@ const getCommentsLikeReply = async (req, res, next) => {
       }
     });
 
-    // Helper function to recursively add likeCount and isLiked status to comments and replies
+    // Helper function to recursively add likeCount, isLiked status to comments and replies
     const addLikeCounts = async (comments) => {
       return Promise.all(comments.map(async (comment) => {
         // Ensure likes is an array (in case it is undefined)
@@ -590,9 +598,17 @@ const getCommentsLikeReply = async (req, res, next) => {
         // Check if the comment is liked by the user
         comment.isLiked = comment.likes.length > 0;
 
-        // Recursively add like counts for replies if they exist
+        // Recursively add like counts and isLiked status for replies if they exist
         if (comment.replies && comment.replies.length > 0) {
           comment.replies = await addLikeCounts(comment.replies);
+        }
+
+        // Now apply the same logic for nested replies (if they exist)
+        if (comment.replies && comment.replies.length > 0) {
+          comment.replies = comment.replies.map(reply => {
+            reply.isLiked = reply.likes && reply.likes.length > 0; // Apply isLiked for replies
+            return reply;
+          });
         }
 
         return comment;
@@ -608,6 +624,8 @@ const getCommentsLikeReply = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 
 const getBlogByType = async (req, res, next) => {
