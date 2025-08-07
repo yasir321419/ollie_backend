@@ -9,7 +9,7 @@ const userCreatePostRequestSchema = Joi.object({
     postdescription: Joi.string().required(),
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
-    postRequestCategory: Joi.array().items(Joi.number()).optional(),
+    postRequestCategory: Joi.array().items(Joi.string()).optional(),
 
   }),
 });
