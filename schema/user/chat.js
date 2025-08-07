@@ -6,10 +6,6 @@ const userCreateChatRoomSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().optional(),
     description: Joi.string().optional(),
-    // users: Joi.alternatives().try(
-    //   Joi.array().items(Joi.number().integer().positive()),
-    //   Joi.string() // allow raw string
-    // ).required(),
   }),
 });
 

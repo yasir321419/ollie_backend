@@ -4,18 +4,26 @@ const validateRequest = require("../../middleware/validateRequest");
 
 const userChatRouter = require("express").Router();
 const userChatController = require("../../controllers/user/userChatController");
-const { userCreateChatRoomSchema, userSentAttachmentSchema } = require("../../schema/user/chat");
+const { userSentAttachmentSchema, userCreateChatRoomSchema } = require("../../schema/user/chat");
 const { verifyUserToken } = require("../../middleware/auth");
 const handleMultiPartData = require("../../middleware/multiPartData");
 
 
 userChatRouter.post(
-  "/userCreateChatRoom",
+  "/createOneToOneChatRoom",
+  limiter,
+  verifyUserToken,
+  validateRequest(userCreateChatRoomSchema),
+  userChatController.createOneToOneChatRoom
+);
+
+userChatRouter.post(
+  "/createGroupChatRoom",
   limiter,
   verifyUserToken,
   handleMultiPartData.single("image"),
   validateRequest(userCreateChatRoomSchema),
-  userChatController.createChatRoom
+  userChatController.createGroupChatRoom
 );
 
 
