@@ -110,7 +110,7 @@ const getUserPostRequest = async (req, res, next) => {
 
     handlerOk(res, 200,
 
-      finduserpostrequest
+      ...finduserpostrequest
 
       , 'user post request found successfully');
 
@@ -144,7 +144,7 @@ const getAllPostRequest = async (req, res, next) => {
 
 
 
-    handlerOk(res, 200, findpostrequest, "post requests found successfully")
+    handlerOk(res, 200, ...findpostrequest, "post requests found successfully")
 
   } catch (error) {
     next(error)
