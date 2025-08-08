@@ -9,7 +9,8 @@ require("dotenv").config();
 
 const verifyUserToken = async (req, res, next) => {
   try {
-    const token = req.headers["x-access-token"];
+    const token = req.headers["x-access-token"] || req.headers["authorization"]?.split(" ")[1];
+
     if (!token || token === "" || token === undefined || token === false) {
       throw new BadRequestError("A token is required for authentication");
     }
@@ -46,7 +47,8 @@ const verifyUserToken = async (req, res, next) => {
 
 const verifyAdminToken = async (req, res, next) => {
   try {
-    const token = req.headers["x-access-token"];
+    const token = req.headers["x-access-token"] || req.headers["authorization"]?.split(" ")[1];
+
     if (!token || token === "" || token === undefined || token === false) {
       throw new BadRequestError("A token is required for authentication");
     }
