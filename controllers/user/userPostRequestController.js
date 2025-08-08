@@ -278,7 +278,7 @@ const getAllVolunteerRequest = async (req, res, next) => {
 
 
 
-    handlerOk(res, 200, findAllVolunteerRequests, 'volunteer request found succesfully')
+    handlerOk(res, 200, ...findAllVolunteerRequests, 'volunteer request found succesfully')
   } catch (error) {
     next(error)
   }
