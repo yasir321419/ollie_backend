@@ -1,9 +1,11 @@
+const { PostRequestStatus } = require("@prisma/client");
 const prisma = require("../../config/prismaConfig");
 const { NotFoundError, ValidationError, BadRequestError, ForbiddenError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
 const checkAndDeductUserCredit = require("../../utils/checkConnects");
 const checkUserSubscription = require("../../utils/checkSubscription");
 const sendNotification = require("../../utils/notification");
+const { PostRequestStatusConstants, VolunteerRequestStatusConstants } = require("../../constants/constant");
 
 const getPostRequestCaterogy = async (req, res, next) => {
   try {
@@ -122,34 +124,76 @@ const getUserPostRequest = async (req, res, next) => {
 
 const getAllPostRequest = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const skip = (page - 1) * limit;
+    const { id: userId } = req.user;
 
+    // 1️⃣ Check if the user has any post requests
+    const userRequestCount = await prisma.postRequest.count({
+      where: { userId }
+    });
 
-    const findpostrequest = await Promise.all([
-      prisma.postRequest.findMany({
-        include: {
-          user: true,
-          categories: true
-        },
-        skip,
-        take: limit
-      })
-    ])
+    console.log(`User has ${userRequestCount} post requests`);
 
-    if (findpostrequest.length === 0) {
-      throw new NotFoundError("post requests not found")
+    let whereClause = {};
+    if (userRequestCount > 0) {
+      // If the user has requests, fetch only their own requests
+      whereClause = { userId };
+    } else {
+      // If the user has no requests, show posts from other users with the given status
+      whereClause = {
+        status: {
+          in: [
+            PostRequestStatusConstants.ReachOut, // Use enum values here
+            PostRequestStatusConstants.VolunteerRequestSent,
+            PostRequestStatusConstants.MarkAsCompleted,
+            PostRequestStatusConstants.TaskCompleted
+
+          ]
+        }
+      };
     }
 
+    console.log(`Where Clause: `, whereClause);
 
+    // 2️⃣ Fetch data
+    const postRequests = await prisma.postRequest.findMany({
+      where: whereClause,
+      include: {
+        user: true,
+        categories: true
+      },
+      orderBy: { scheduledAt: "desc" },
+      skip,
+      take: limit
+    });
 
-    handlerOk(res, 200, ...findpostrequest, "post requests found successfully")
+    console.log(`Post Requests: `, postRequests); // Check the fetched data
+
+    // 3️⃣ If no posts at all, we should check and decide on the next fallback
+    if (postRequests.length === 0 && userRequestCount === 0) {
+      throw new NotFoundError("No post requests found for the user and no default requests available");
+    }
+
+    // 4️⃣ Update status to "NoRequest" for other users' requests if the user has no requests
+    if (userRequestCount === 0) {
+      postRequests.forEach(post => {
+        post.status = PostRequestStatus.NoRequest; // Override status for requests from other users
+      });
+    }
+
+    console.log(`Post Requests with updated status: `, postRequests);
+
+    // 5️⃣ Send response
+    handlerOk(res, 200, postRequests, "Post requests found successfully");
 
   } catch (error) {
-    next(error)
+    console.error("Error:", error);
+    next(error);
   }
-}
+};
+
 
 const sendVolunteerRequest = async (req, res, next) => {
   try {
@@ -257,8 +301,9 @@ const getAllVolunteerRequest = async (req, res, next) => {
     const findAllVolunteerRequests = await Promise.all([
       prisma.volunteerRequest.findMany({
         where: {
-          status: "VolunteerRequestSent",
-          post: {
+          status: {
+            in: ["VolunteerRequestSent", "ReachOut"] // Use enum values or strings if enums are set up correctly
+          }, post: {
             userId: id // Only requests for posts owned by the user
           }
         },
@@ -287,7 +332,9 @@ const getAllVolunteerRequest = async (req, res, next) => {
 const acceptVolunteer = async (req, res, next) => {
   try {
     const { requestId } = req.params;
-    const { id, deviceToken, firstName } = req.user;
+    const { id, deviceToken, firstName } = req.user; // action can be 'accept' or 'reject'
+    const { action } = req.body;
+    console.log(action);
 
     const findrequest = await prisma.volunteerRequest.findUnique({
       where: {
@@ -300,60 +347,82 @@ const acceptVolunteer = async (req, res, next) => {
     });
 
     if (!findrequest) {
-      throw new NotFoundError("volunteer request not found")
+      throw new NotFoundError("Volunteer request not found");
     }
 
     if (findrequest.post.userId !== id) {
-      throw new ForbiddenError("You are not authorized to accept this request");
-
+      throw new ForbiddenError("You are not authorized to accept or reject this request");
     }
 
-    const updateVolunteerRequest = await prisma.volunteerRequest.update({
-      where: {
-        id: findrequest.id
-      },
-      data: {
-        status: "ReachOut"
-      }
-    });
+    let updatedVolunteerRequest, updatedPostRequest;
 
-    if (!updateVolunteerRequest) {
-      throw new ValidationError("Volunteer request not updated")
+    if (action === 'accept') {
+      // Accepting the request
+      updatedVolunteerRequest = await prisma.volunteerRequest.update({
+        where: {
+          id: findrequest.id
+        },
+        data: {
+          status: VolunteerRequestStatusConstants.ReachOut // Use the correct enum value here
+        }
+      });
+
+      updatedPostRequest = await prisma.postRequest.update({
+        where: {
+          id: findrequest.postId
+        },
+        data: {
+          status: VolunteerRequestStatusConstants.ReachOut // Use the correct enum value here
+        }
+      });
+
+    } else if (action === 'reject') {
+      // Rejecting the request
+      updatedVolunteerRequest = await prisma.volunteerRequest.update({
+        where: {
+          id: findrequest.id
+        },
+        data: {
+          status: VolunteerRequestStatusConstants.NoRequest // Use the correct enum value here
+        }
+      });
+
+      updatedPostRequest = await prisma.postRequest.update({
+        where: {
+          id: findrequest.postId
+        },
+        data: {
+          status: VolunteerRequestStatusConstants.NoRequest // Use the correct enum value here
+        }
+      });
+
+    } else {
+      throw new ValidationError("Invalid action. Use 'accept' or 'reject'.");
     }
 
-    const updateRequest = await prisma.postRequest.update({
-      where: {
-        id: findrequest.postId,
-      },
-      data: {
-        status: "ReachOut"
-      },
-      include: {
-        user: true
-      }
-    });
-
-    if (!updateRequest) {
-      throw new ValidationError("post request not updated")
+    if (!updatedVolunteerRequest || !updatedPostRequest) {
+      throw new ValidationError("Error updating volunteer request or post request.");
     }
 
+    // Optionally send notifications if needed
     // await sendNotification(
     //   id,
     //   deviceToken,
-    //   `Hi ${firstName}, you have successfully accepted a volunteer request.`
+    //   `Hi ${firstName}, you have successfully ${action}ed a volunteer request.`
     // );
 
     // await sendNotification(
     //   findrequest.volunteerId,
     //   findrequest.volunteer.deviceToken,
-    //   `Hi ${findrequest.volunteer.firstName}, your volunteer request has been accepted!`
+    //   `Hi ${findrequest.volunteer.firstName}, your volunteer request has been ${action}ed!`
     // );
 
-    handlerOk(res, 200, { ...updateRequest, updateVolunteerRequest }, 'Volunteer request accepted successfully');
+    handlerOk(res, 200, { updatedVolunteerRequest, updatedPostRequest }, `Volunteer request ${action}ed successfully`);
+
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 const markAsCompletedByVolunteer = async (req, res, next) => {
   try {

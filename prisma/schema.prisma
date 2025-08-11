@@ -41,6 +41,7 @@ enum PostType {
 
 // Define the enum for VolunteerRequestStatus first
 enum VolunteerRequestStatus {
+  NoRequest
   VolunteerRequestSent
   ReachOut
   MarkAsCompleted
@@ -48,12 +49,14 @@ enum VolunteerRequestStatus {
 }
 
 enum PostRequestStatus {
-  NoRequest           // When no volunteer has applied yet (default)
+  NoRequest
   VolunteerRequestSent
   ReachOut
   MarkAsCompleted
   TaskCompleted
 }
+
+
 
 enum ChatRoomType {
   ONE_TO_ONE

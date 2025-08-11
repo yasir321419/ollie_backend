@@ -42,6 +42,7 @@ const userAcceptVolunteerRequestSchema = Joi.object({
     requestId: Joi.string().required()
   }),
   body: Joi.object({
+    action: Joi.string().required()
   }),
 });
 
