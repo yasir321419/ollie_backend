@@ -122,6 +122,37 @@ const getUserPostRequest = async (req, res, next) => {
   }
 }
 
+// const getAllPostRequest = async (req, res, next) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+//     const { id } = req.user;
+
+//     const findpostrequest = await Promise.all([
+//       prisma.postRequest.findMany({
+//         include: {
+//           user: true,
+//           categories: true
+//         },
+//         skip,
+//         take: limit
+//       })
+//     ])
+
+//     if (findpostrequest.length === 0) {
+//       throw new NotFoundError("post requests not found")
+//     }
+
+
+
+//     handlerOk(res, 200, ...findpostrequest, "post requests found successfully")
+
+//   } catch (error) {
+//     next(error)
+//   }
+// }
+
 const getAllPostRequest = async (req, res, next) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -145,11 +176,11 @@ const getAllPostRequest = async (req, res, next) => {
       whereClause = {
         status: {
           in: [
+            PostRequestStatusConstants.NoRequest,
             PostRequestStatusConstants.ReachOut, // Use enum values here
             PostRequestStatusConstants.VolunteerRequestSent,
             PostRequestStatusConstants.MarkAsCompleted,
             PostRequestStatusConstants.TaskCompleted
-
           ]
         }
       };
@@ -189,7 +220,6 @@ const getAllPostRequest = async (req, res, next) => {
     handlerOk(res, 200, postRequests, "Post requests found successfully");
 
   } catch (error) {
-    console.error("Error:", error);
     next(error);
   }
 };
@@ -423,6 +453,11 @@ const acceptVolunteer = async (req, res, next) => {
     next(error);
   }
 };
+
+
+
+
+
 
 const markAsCompletedByVolunteer = async (req, res, next) => {
   try {
