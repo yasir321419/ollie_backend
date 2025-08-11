@@ -124,34 +124,92 @@ const getUserPostRequest = async (req, res, next) => {
 
 // const getAllPostRequest = async (req, res, next) => {
 //   try {
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
+//     const page = Math.max(parseInt(req.query.page) || 1, 1);
+//     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
 //     const skip = (page - 1) * limit;
-//     const { id } = req.user;
+//     const { id: userId } = req.user;
 
-//     const findpostrequest = await Promise.all([
-//       prisma.postRequest.findMany({
-//         include: {
-//           user: true,
-//           categories: true
+//     // 1️⃣ Check if the user has any post requests
+//     const userRequestCount = await prisma.postRequest.count({
+//       where: { userId }
+//     });
+
+//     console.log(`User has ${userRequestCount} post requests`);
+
+//     let whereClause = {};
+//     if (userRequestCount > 0) {
+//       // If the user has requests, fetch both their own requests and others' requests
+//       whereClause = {
+//         OR: [
+//           { userId }, // user's own posts
+//           {
+//             status: {
+//               in: [
+//                 PostRequestStatusConstants.NoRequest,
+//                 PostRequestStatusConstants.ReachOut,
+//                 PostRequestStatusConstants.VolunteerRequestSent,
+//                 PostRequestStatusConstants.MarkAsCompleted,
+//                 PostRequestStatusConstants.TaskCompleted
+//               ]
+//             },
+//             userId: { not: userId } // exclude user's own posts from others' posts
+//           }
+//         ]
+//       };
+//     } else {
+//       // If the user has no requests, show only posts from other users
+//       whereClause = {
+//         status: {
+//           in: [
+//             PostRequestStatusConstants.NoRequest,
+//             PostRequestStatusConstants.ReachOut,
+//             PostRequestStatusConstants.VolunteerRequestSent,
+//             PostRequestStatusConstants.MarkAsCompleted,
+//             PostRequestStatusConstants.TaskCompleted
+//           ]
 //         },
-//         skip,
-//         take: limit
-//       })
-//     ])
-
-//     if (findpostrequest.length === 0) {
-//       throw new NotFoundError("post requests not found")
+//         userId: { not: userId } // Only show posts from other users
+//       };
 //     }
 
+//     console.log(`Where Clause: `, whereClause);
 
+//     // 2️⃣ Fetch data
+//     const postRequests = await prisma.postRequest.findMany({
+//       where: whereClause,
+//       include: {
+//         user: true,
+//         categories: true
+//       },
+//       orderBy: { scheduledAt: "desc" },
+//       skip,
+//       take: limit
+//     });
 
-//     handlerOk(res, 200, ...findpostrequest, "post requests found successfully")
+//     console.log(`Post Requests: `, postRequests); // Check the fetched data
+
+//     // 3️⃣ If no posts at all, return a message
+//     if (postRequests.length === 0) {
+//       throw new NotFoundError("No post requests found for the user and no default requests available");
+//     }
+
+//     // 4️⃣ If the user has no requests, set status to "NoRequest" for other users' posts
+//     if (userRequestCount === 0) {
+//       postRequests.forEach(post => {
+//         post.status = PostRequestStatus.NoRequest; // Set status for other users' posts to "NoRequest"
+//       });
+//     }
+
+//     console.log(`Post Requests with updated status: `, postRequests);
+
+//     // 5️⃣ Send response
+//     handlerOk(res, 200, postRequests, "Post requests found successfully");
 
 //   } catch (error) {
-//     next(error)
+//     next(error);
 //   }
-// }
+// };
+
 
 const getAllPostRequest = async (req, res, next) => {
   try {
@@ -169,20 +227,37 @@ const getAllPostRequest = async (req, res, next) => {
 
     let whereClause = {};
     if (userRequestCount > 0) {
-      // If the user has requests, fetch only their own requests
-      whereClause = { userId };
+      // If the user has requests, fetch both their own requests and others' requests
+      whereClause = {
+        OR: [
+          { userId }, // user's own posts
+          {
+            status: {
+              in: [
+                PostRequestStatusConstants.NoRequest,
+                PostRequestStatusConstants.ReachOut,
+                PostRequestStatusConstants.VolunteerRequestSent,
+                PostRequestStatusConstants.MarkAsCompleted,
+                PostRequestStatusConstants.TaskCompleted
+              ]
+            },
+            userId: { not: userId } // exclude user's own posts from others' posts
+          }
+        ]
+      };
     } else {
-      // If the user has no requests, show posts from other users with the given status
+      // If the user has no requests, show only posts from other users
       whereClause = {
         status: {
           in: [
             PostRequestStatusConstants.NoRequest,
-            PostRequestStatusConstants.ReachOut, // Use enum values here
+            PostRequestStatusConstants.ReachOut,
             PostRequestStatusConstants.VolunteerRequestSent,
             PostRequestStatusConstants.MarkAsCompleted,
             PostRequestStatusConstants.TaskCompleted
           ]
-        }
+        },
+        userId: { not: userId } // Only show posts from other users
       };
     }
 
@@ -193,7 +268,10 @@ const getAllPostRequest = async (req, res, next) => {
       where: whereClause,
       include: {
         user: true,
-        categories: true
+        categories: true,
+        volunteerRequests: { // Include volunteer requests to see volunteer status
+          where: { volunteerId: userId }
+        }
       },
       orderBy: { scheduledAt: "desc" },
       skip,
@@ -202,17 +280,22 @@ const getAllPostRequest = async (req, res, next) => {
 
     console.log(`Post Requests: `, postRequests); // Check the fetched data
 
-    // 3️⃣ If no posts at all, we should check and decide on the next fallback
-    if (postRequests.length === 0 && userRequestCount === 0) {
+    // 3️⃣ If no posts at all, return a message
+    if (postRequests.length === 0) {
       throw new NotFoundError("No post requests found for the user and no default requests available");
     }
 
-    // 4️⃣ Update status to "NoRequest" for other users' requests if the user has no requests
-    if (userRequestCount === 0) {
-      postRequests.forEach(post => {
-        post.status = PostRequestStatus.NoRequest; // Override status for requests from other users
-      });
-    }
+    // 4️⃣ Handle volunteer-specific status
+    postRequests.forEach(post => {
+      // If this is a volunteer request (for posts from other users), update its status
+      if (post.volunteerRequests && post.volunteerRequests.length > 0) {
+        // If the user is a volunteer for this post, update the status based on the volunteer request
+        post.status = post.volunteerRequests[0].status; // Use the volunteer's status for this post
+      } else if (userRequestCount === 0) {
+        // If the user has no posts, set status to "NoRequest" for other users' posts
+        post.status = PostRequestStatus.NoRequest; // Set status for other users' posts to "NoRequest"
+      }
+    });
 
     console.log(`Post Requests with updated status: `, postRequests);
 
@@ -453,11 +536,6 @@ const acceptVolunteer = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
-
 
 const markAsCompletedByVolunteer = async (req, res, next) => {
   try {
