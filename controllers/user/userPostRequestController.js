@@ -97,7 +97,8 @@ const getUserPostRequest = async (req, res, next) => {
           userId: id
         },
         include: {
-          user: true
+          user: true,
+          volunteerRequests: true
         },
         skip,
         take: limit
