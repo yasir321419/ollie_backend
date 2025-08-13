@@ -24,7 +24,9 @@ const createOneToOneChatRoom = async (req, res, next) => {
     });
 
     if (existingRoom) {
-      throw new ConflictError("Chat room already exists")
+      // throw new ConflictError("Chat room already exists")
+      return handlerOk(res, 200, { chatRoom: existingRoom.id }, 'Chat room already exists');
+
     }
 
     // Create the chat room with the creator and the peer as participants
