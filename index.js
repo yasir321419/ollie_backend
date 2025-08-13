@@ -68,12 +68,24 @@ io.on("connection", (socket) => {
 
 
 
+  // socket.on("joinRoom", (data) => {
+  //   console.log("data_in_joinRoom_in_backend:", data);
+
+  //   socket.join(data.chatroom);               // Join the chatroom
+  //   socket.join(socket.userId.toString());    // Personal room
+  //   socket.join(socket.adminId);
+  //   ChatRoomController.getChatRoomData(socket, data);
+  // });
+
   socket.on("joinRoom", (data) => {
     console.log("data_in_joinRoom_in_backend:", data);
 
+    // Ensure the user joins the chatroom and personal room
     socket.join(data.chatroom);               // Join the chatroom
     socket.join(socket.userId.toString());    // Personal room
-    socket.join(socket.adminId);
+    socket.join(socket.adminId);              // Admin room (if applicable)
+
+    // Fetch and emit chatroom data (messages, participants, etc.)
     ChatRoomController.getChatRoomData(socket, data);
   });
 
