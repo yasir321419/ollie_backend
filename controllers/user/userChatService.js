@@ -5,83 +5,6 @@ const prisma = require("../../config/prismaConfig");
 
 
 
-// const sendMessage = async (io, socket, data) => {
-//   const { chatroom, message } = data;
-//   const userId = socket.userId;
-//   const userType = socket.userType; // 'USER' or 'ADMIN'
-
-//   const chatRoomData = await prisma.chatRoom.findFirst({
-//     where: { id: chatroom },
-//     include: {
-//       chatRoomParticipants: {
-//         select: {
-//           userId: true,
-//           adminId: true
-//         }
-//       }
-//     }
-//   });
-
-//   if (!chatRoomData) {
-//     return io.to(userId).emit("message", {
-//       status: "error",
-//       message: "Chat room not found",
-//     });
-//   }
-
-//   const isParticipant = chatRoomData.chatRoomParticipants.some(
-//     p => p.userId === userId || p.adminId === userId
-//   );
-
-//   if (!isParticipant) {
-//     return io.to(userId).emit("message", {
-//       status: "error",
-//       message: "User is not part of this chat room",
-//     });
-//   }
-
-//   const messageData = {
-//     content: message || null,
-//     attachmentUrl: null,
-//     attachmentType: null,
-//     chatRoomId: chatroom,
-//     ...(userType === "USER" && { senderId: userId }),
-//     ...(userType === "ADMIN" && { adminSenderId: userId }),
-//   };
-
-//   const newMessage = await prisma.message.create({
-//     data: messageData,
-//     include: {
-//       sender: {
-//         select: {
-//           id: true,
-//           firstName: true,
-//           lastName: true,
-//           image: true
-//         }
-//       },
-//       adminSender: {
-//         select: {
-//           id: true,
-//           name: true,
-//           email: true
-//         }
-//       }
-//     }
-//   });
-
-//   chatRoomData.chatRoomParticipants.forEach((p) => {
-//     const recipientId = p.userId || p.adminId;
-//     if (recipientId) {
-//       io.to(recipientId).emit("message", {
-//         status: "success",
-//         data: newMessage,
-//         message: "Message sent successfully",
-//       });
-//     }
-//   });
-// };
-
 
 const sendMessage = async (io, socket, data) => {
   const { chatroom, message } = data;
@@ -260,8 +183,8 @@ const getChatRoomData = async (socket, data) => {
           }
         },
         messages: {
-          orderBy: { createdAt: "desc" },  // Sorting by `createdAt`
-          take: 10,
+          // orderBy: { createdAt: "desc" },  // Sorting by `createdAt`
+          // take: 10,
           include: {
             sender: {
               select: {
