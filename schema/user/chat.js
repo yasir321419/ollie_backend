@@ -1,11 +1,23 @@
 const Joi = require("joi");
 
-const userCreateChatRoomSchema = Joi.object({
+
+const userCreateOneToOneChatRoomSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({}),
+  body: Joi.object({
+    userId: Joi.string().required(),
+
+  }),
+});
+
+
+const userCreateGroupChatRoomSchema = Joi.object({
   query: Joi.object({}),
   params: Joi.object({}),
   body: Joi.object({
     name: Joi.string().optional(),
     description: Joi.string().optional(),
+
   }),
 });
 
@@ -22,6 +34,7 @@ const userSentAttachmentSchema = Joi.object({
 });
 
 module.exports = {
-  userCreateChatRoomSchema,
+  userCreateOneToOneChatRoomSchema,
+  userCreateGroupChatRoomSchema,
   userSentAttachmentSchema
 }

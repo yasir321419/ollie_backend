@@ -7,30 +7,48 @@ const { handlerOk } = require("../../resHandler/responseHandler");
 const createOneToOneChatRoom = async (req, res, next) => {
   try {
     const { id, userType } = req.user; // Creator's ID (user making the request)
+    const { userId } = req.body;       // Peer User ID passed in the request
 
-    // One-to-One Chat Room Creation
-    const oneToOneKey = id + "_creator"; // Using the creator's ID for now
+    if (id === userId) {
+      throw new ConflictError("Cannot start a chat with yourself")
+    }
 
-    // Create the chat room with the creator as the first participant
+    // One-to-One Chat Room Creation with a deterministic key
+    const oneToOneKey = [id, userId].sort().join("_"); // Ensure the key is always the same order
+
+    // Check if the chat room already exists using the oneToOneKey
+    const existingRoom = await prisma.chatRoom.findFirst({
+      where: {
+        oneToOneKey,  // Check based on the unique one-to-one key
+      },
+    });
+
+    if (existingRoom) {
+      throw new ConflictError("Chat room already exists")
+    }
+
+    // Create the chat room with the creator and the peer as participants
     const chatRoom = await prisma.chatRoom.create({
       data: {
-        type: "ONE_TO_ONE", // Set type to "ONE_TO_ONE"
-        oneToOneKey,
-        creatorId: id,  // The creator of the chat room
+        type: "ONE_TO_ONE",    // Set type to "ONE_TO_ONE"
+        oneToOneKey,           // Unique key for this one-to-one chat
+        creatorId: id,         // The creator of the chat room
         creatorType: userType,
-        // Add creator as the first participant
         chatRoomParticipants: {
           create: [
-            {
-              userId: userType === "USER" ? id : null, // Only add userId if the creator is a user
-              adminId: userType === "ADMIN" ? id : null, // Only add adminId if the creator is an admin
-            },
+            { userId: id },       // Add the creator as participant
+            { userId: userId }    // Add the peer as participant
           ],
         },
       },
       include: {
-        creator: true, // Include creator data (user or admin)
-        chatRoomParticipants: true, // Include the participants
+        creator: true,          // Include creator data (user or admin)
+        chatRoomParticipants: {
+          include: {
+            user: true,
+            admin: true
+          }
+        }, // Include the participants
       },
     });
 
@@ -39,6 +57,8 @@ const createOneToOneChatRoom = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 
 const createGroupChatRoom = async (req, res, next) => {
@@ -94,15 +114,15 @@ const getOneToOneChatRooms = async (req, res, next) => {
     const rooms = await prisma.chatRoom.findMany({
       where: {
         type: "ONE_TO_ONE", // Ensure it's a one-to-one chat room
-        // chatRoomParticipants: {
-        //   some: {
-        //     OR: [
-        //       { userId: id },   // Check for user participation
-        //       { adminId: id }    // Check for admin participation
-        //     ]
-        //   }
-        // }
-        creatorId: id
+        chatRoomParticipants: {
+          some: {
+            OR: [
+              { userId: id },   // Check for user participation
+              { adminId: id }    // Check for admin participation
+            ]
+          }
+        }
+        // creatorId: id
       },
       include: {
         // Include chat room participants' information
@@ -168,7 +188,15 @@ const getGroupChatRooms = async (req, res, next) => {
     const findgroupchatroom = await prisma.chatRoom.findMany({
       where: {
         type: "GROUP",
-        creatorId: id
+        // creatorId: id
+        chatRoomParticipants: {
+          some: {
+            OR: [
+              { userId: id },   // Check for user participation
+              { adminId: id }    // Check for admin participation
+            ]
+          }
+        }
       },
       include: {
         // Include chat room participants' information
