@@ -17,9 +17,6 @@ const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
 require("dotenv").config();
 
-// const corsOptions = {
-//   origin: ["*", "http://localhost:3000"]
-// }
 
 
 app.use(cors({ origin: '*' }));
@@ -42,26 +39,7 @@ dbConnect();
 
 adminSeed();
 
-// io.use((socket, next) => {
-//   const token = req.headers["x-access-token"] || req.headers["authorization"]?.split(" ")[1];
 
-//   if (!token) {
-//     console.log("Token missing in socket connection");
-//     return next(new Error("Authentication token missing"));
-//   }
-//   console.log(token, "token");
-
-//   try {
-//     const decoded = jwt.verify(token, process.env.SECRET_KEY); // your JWT secret
-//     socket.userId = decoded.id;
-//     console.log(socket.userId, "userid");
-
-//     next();
-//   } catch (err) {
-//     console.log("Invalid token");
-//     return next(new Error("Invalid authentication token"));
-//   }
-// });
 
 io.use((socket, next) => {
   // Get the token from the socket handshake headers
