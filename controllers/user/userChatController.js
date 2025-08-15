@@ -341,7 +341,7 @@ const uploadAttachment = async (req, res, next) => {
         id: chatRoomId
       },
       include: {
-        participants: {
+        chatRoomParticipants: {
           select: {
             userId: true
           }
@@ -382,7 +382,7 @@ const uploadAttachment = async (req, res, next) => {
 
     // ✅ Emit message to chat participants via socket
     const io = req.app.get('io'); // You need to expose `io` in your app
-    findChatRoom.participants.forEach((p) => {
+    findChatRoom.chatRoomParticipants.forEach((p) => {
       io.to(p.userId.toString()).emit("message", {
         status: "success",
         data: newMessage,
