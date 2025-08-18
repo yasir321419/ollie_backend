@@ -33,8 +33,19 @@ const userSentAttachmentSchema = Joi.object({
   }),
 });
 
+const userAddInChatRoomSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+    chatRoomId: Joi.string().required(),
+
+  }),
+  body: Joi.object({
+  }),
+});
+
 module.exports = {
   userCreateOneToOneChatRoomSchema,
   userCreateGroupChatRoomSchema,
-  userSentAttachmentSchema
+  userSentAttachmentSchema,
+  userAddInChatRoomSchema
 }

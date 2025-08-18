@@ -92,7 +92,7 @@ model Admin {
   createdChatRooms ChatRoom[] @relation("AdminChatRooms")
 
   // This admin is a participant in these chat rooms via the join table
-  chatRoomParticipants ChatRoomParticipant[]
+  // chatRoomParticipants ChatRoomParticipant[]
 
   Message Message[] @relation("AdminSender")
 
@@ -155,6 +155,7 @@ model Like {
   blog    Blog  @relation(fields: [blogId], references: [id], onDelete: Cascade)
 
   @@unique([userId, blogId]) // prevents a user from liking the same blog multiple times
+   @@map("likes") 
 } 
 
 model UserPostLike {
@@ -256,9 +257,8 @@ model SavedTopic {
 }
 
 
-
 model User {
-  id                     String      @id @default(uuid())
+  id                     String   @id @default(uuid())
   email                  String   @unique
   password               String?
   phoneNumber            String?
@@ -280,8 +280,7 @@ model User {
   wantDailyActivities    Boolean  @default(false)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
-  showAds    Boolean  @default(true)
-
+  showAds                Boolean  @default(true)
 
   // Relations
   tasks                  Task[]
@@ -294,32 +293,27 @@ model User {
   postRequests           PostRequest[]
   volunteerRequests      VolunteerRequest[]  @relation("VolunteerUser")
   commentLikes           CommentLike[]
-  messages               Message[]  // Messages sent by this user
-  createdChatRooms       ChatRoom[] @relation("UserChatRooms") // Chat rooms this user created
+  // messages are exposed via Message.sender (below)
+  createdChatRooms       ChatRoom[] @relation("UserChatRooms")
   UserPost               UserPost[]
   UserPostLike           UserPostLike[]
   UserPostComment        UserPostComment[]
   UserPostCommentLike    UserPostCommentLike[]
   eventParticipants      EventParticipant[]
+  Message                Message[] @relation("UserSender")
+  UserSubscription       UserSubscription[]
+  ConnectPurchase        ConnectPurchase[]
+  Wallet                 Wallet[]
+  Credit                 Credit[]
+  Donation               Donation[]
+  Notification           Notification[]
 
-  chatRoomParticipants   ChatRoomParticipant[]
+  // ❌ Removed: ChatRoom ChatRoom[]
+  // ❌ Keep ChatRoomParticipant as JSON-only table without relations
 
   ChatRoom ChatRoom[]
-
-  Message Message[] @relation("UserSender")
-
-  UserSubscription UserSubscription[]
-
-  ConnectPurchase ConnectPurchase[]
-
-  Wallet Wallet[]
-
-  Credit Credit[]
-
-  Donation Donation[]
-
-  Notification Notification[]
 }
+
 
 
 
@@ -405,7 +399,7 @@ model ChatRoom {
   image             String?
   creatorId         String
   creatorType       String
-  oneToOneKey       String?               // Only for ONE_TO_ONE chat type
+  oneToOneKey       String?   @unique            // Only for ONE_TO_ONE chat type
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
@@ -419,44 +413,38 @@ model ChatRoom {
 }
 
 
-
 model ChatRoomParticipant {
-  id         String      @id @default(uuid())
-  chatRoomId String
-  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade) // Adding 'onDelete: Cascade'
+  id         String   @id @default(uuid())
+  chatRoomId String @unique
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
 
-  userId     String?
-  adminId    String?
+  userIds    Json
+  adminIds   Json
 
-  // Relations to User and Admin
-  user       User?    @relation(fields: [userId], references: [id])
-  admin      Admin?   @relation(fields: [adminId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([chatRoomId, userId], name: "unique_user_participant") // Ensure each user is unique per chat room
-  @@unique([chatRoomId, adminId], name: "unique_admin_participant") // Ensure each admin is unique per chat room
+  @@index([chatRoomId])
 }
 
 
 
 model Message {
-  id             String       @id @default(uuid())
+  id             String    @id @default(uuid())
   content        String?
   attachmentUrl  String?
   attachmentType String?
   chatRoomId     String
-
   createdAt      DateTime  @default(now())
-
   senderId       String?
   adminSenderId  String?
 
   chatRoom       ChatRoom  @relation(fields: [chatRoomId], references: [id])
-  sender         User?     @relation("UserSender", fields: [senderId], references: [id])
+  sender         User?     @relation("UserSender",  fields: [senderId],     references: [id])
   adminSender    Admin?    @relation("AdminSender", fields: [adminSenderId], references: [id])
 
-  User User[]
+  // ❌ Removed stray: User User[]
 }
-
 
 
 

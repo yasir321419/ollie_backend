@@ -4,57 +4,48 @@ const { handlerOk } = require("../../resHandler/responseHandler");
 
 
 
+
+
+
 const createOneToOneChatRoom = async (req, res, next) => {
   try {
-    const { id, userType } = req.user; // Creator's ID (user making the request)
-    const { userId } = req.body;       // Peer User ID passed in the request
+    const { id, userType } = req.user;     // creator
+    const { userId: peerId } = req.body;   // the other user
 
-    if (id === userId) {
-      throw new ConflictError("Cannot start a chat with yourself")
-    }
+    if (!peerId) return handlerOk(res, 400, { error: "userId is required" }, "Bad request");
+    if (id === peerId) throw new ConflictError("Cannot start a chat with yourself");
 
-    // One-to-One Chat Room Creation with a deterministic key
-    const oneToOneKey = [id, userId].sort().join("_"); // Ensure the key is always the same order
+    // Stable unique key for 1:1 rooms
+    const idsSorted = [id, peerId].sort();
+    const oneToOneKey = idsSorted.join("_");
 
-    // Check if the chat room already exists using the oneToOneKey
-    const existingRoom = await prisma.chatRoom.findFirst({
-      where: {
-        oneToOneKey,  // Check based on the unique one-to-one key
-      },
-    });
-
+    // If oneToOneKey is unique in schema, use findUnique; otherwise findFirst is fine
+    const existingRoom = await prisma.chatRoom.findFirst({ where: { oneToOneKey } });
     if (existingRoom) {
-      // throw new ConflictError("Chat room already exists")
-      return handlerOk(res, 200, { chatRoom: existingRoom.id }, 'Chat room already exists');
-
+      return handlerOk(res, 200, { chatRoom: existingRoom.id }, "Chat room already exists");
     }
 
-    // Create the chat room with the creator and the peer as participants
+    // Create room + single participant row with both users
     const chatRoom = await prisma.chatRoom.create({
       data: {
-        type: "ONE_TO_ONE",    // Set type to "ONE_TO_ONE"
-        oneToOneKey,           // Unique key for this one-to-one chat
-        creatorId: id,         // The creator of the chat room
-        creatorType: userType,
+        type: "ONE_TO_ONE",
+        oneToOneKey,
+        creatorId: id,
+        creatorType: userType || "USER",
         chatRoomParticipants: {
-          create: [
-            { userId: id },       // Add the creator as participant
-            { userId: userId }    // Add the peer as participant
-          ],
+          create: {
+            userIds: idsSorted,  // ✅ JSON array
+            adminIds: [],        // ✅ required JSON field
+          },
         },
       },
       include: {
-        creator: true,          // Include creator data (user or admin)
-        chatRoomParticipants: {
-          include: {
-            user: true,
-            admin: true
-          }
-        }, // Include the participants
+        creator: true,
+        chatRoomParticipants: true, // ❗ no user/admin includes here (no relations on JSON arrays)
       },
     });
 
-    return handlerOk(res, 200, chatRoom, 'Chat room created successfully');
+    return handlerOk(res, 200, chatRoom, "Chat room created successfully");
   } catch (error) {
     next(error);
   }
@@ -65,196 +56,194 @@ const createOneToOneChatRoom = async (req, res, next) => {
 
 const createGroupChatRoom = async (req, res, next) => {
   try {
-    const { id, userType } = req.user; // Creator's ID (user making the request)
-    let { name, description, image } = req.body;
+    const { id, userType } = req.user; // "USER" or "ADMIN"
+    let { name, description } = req.body;
+    let image;
 
-    const file = req.file; // For file/image upload
-
-    // Handle file upload if present
-    if (file) {
-      const filePath = file.filename;
+    // optional file upload
+    if (req.file) {
       const basePath = `http://${req.get("host")}/public/uploads/`;
-      image = `${basePath}${filePath}`;
+      image = `${basePath}${req.file.filename}`;
     }
+
+    if (!name) return handlerOk(res, 400, { error: "name is required" }, "Bad request");
+
+    // seed participant arrays with the creator
+    const isUserCreator = userType === "USER";
+    const userIds = isUserCreator ? [id] : [];
+    const adminIds = isUserCreator ? [] : [id];
 
     const chatRoom = await prisma.chatRoom.create({
       data: {
         type: "GROUP",
-        creatorId: id,  // The creator of the chat room
+        creatorId: id,
         creatorType: userType,
         name,
         description,
         image,
         chatRoomParticipants: {
-          create: [
-            {
-              userId: userType === "USER" ? id : null, // Only add userId if the creator is a user
-              adminId: userType === "ADMIN" ? id : null, // Only add adminId if the creator is an admin
-            },
-          ],
+          // ✅ ONE row per room, with JSON arrays present for both fields
+          create: { userIds, adminIds },
         },
       },
       include: {
-        creator: true, // Include creator data (user or admin)
-        chatRoomParticipants: true, // Include the participants
+        creator: true,
+        chatRoomParticipants: true, // (no user/admin relations on JSON arrays)
       },
     });
 
-    return handlerOk(res, 200, chatRoom, 'Chat room created successfully');
+    return handlerOk(res, 200, chatRoom, "Chat room created successfully");
   } catch (error) {
     next(error);
   }
 };
+
 
 
 
 const getOneToOneChatRooms = async (req, res, next) => {
   try {
-    const { id, userType } = req.user;  // The user making the request (creator or participant)
+    const { id } = req.user;
 
-    // Fetch one-to-one chat rooms where the user (or admin) is a participant
     const rooms = await prisma.chatRoom.findMany({
       where: {
-        type: "ONE_TO_ONE", // Ensure it's a one-to-one chat room
+        type: "ONE_TO_ONE",
         chatRoomParticipants: {
           some: {
             OR: [
-              { userId: id },   // Check for user participation
-              { adminId: id }    // Check for admin participation
-            ]
-          }
-        }
-        // creatorId: id
+              { userIds: { array_contains: id } },
+              { adminIds: { array_contains: id } },
+            ],
+          },
+        },
       },
       include: {
-        // Include chat room participants' information
         chatRoomParticipants: {
           select: {
-            userId: true,
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true
-              }
-            },
-            adminId: true,
-            admin: {
-              select: {
-                id: true,
-                name: true,  // Admin name
-                email: true  // Optional admin email
-              }
-            }
-          }
+            userIds: true,
+            adminIds: true,
+          },
         },
-        // Include messages, ordered by createdAt (descending)
         messages: {
           orderBy: { createdAt: "desc" },
+          take: 1, // last message only; remove if you want them all
           include: {
             sender: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true
-              }
-            }
-          }
-        }
+              select: { id: true, firstName: true, lastName: true, image: true },
+            },
+          },
+        },
       },
-      orderBy: {
-        updatedAt: "desc"  // Order chat rooms by last updated time (descending)
-      }
+      orderBy: { updatedAt: "desc" },
     });
 
-    // If no chat rooms are found, return a 404 error
     if (!rooms.length) {
       throw new NotFoundError("No one-to-one chat rooms found");
     }
 
-    // Send the response with the list of chat rooms
-    handlerOk(res, 200, rooms, 'One-to-one chat rooms found successfully');
+    // OPTIONAL: hydrate participants with user/admin profiles
+    // Collect all userIds from the JSON arrays
+    const allUserIds = Array.from(new Set(
+      rooms.flatMap(r =>
+        r.chatRoomParticipants.flatMap(p => Array.isArray(p.userIds) ? p.userIds : [])
+      )
+    ));
+
+    // Fetch user profiles in one shot (skip if you don't need them)
+    const users = await prisma.user.findMany({
+      where: { id: { in: allUserIds } },
+      select: { id: true, firstName: true, lastName: true, image: true },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    // Attach hydrated participant data
+    const result = rooms.map(r => ({
+      ...r,
+      participants: {
+        users: r.chatRoomParticipants.flatMap(p =>
+          (Array.isArray(p.userIds) ? p.userIds : []).map(uid => userMap.get(uid)).filter(Boolean)
+        ),
+        adminIds: r.chatRoomParticipants.flatMap(p => p.adminIds || []), // hydrate admins similarly if you have an Admin table
+      },
+    }));
+
+    handlerOk(res, 200, result, "One-to-one chat rooms found successfully");
   } catch (error) {
     next(error);
   }
 };
-
 
 
 const getGroupChatRooms = async (req, res, next) => {
   try {
     const { id } = req.user;
 
-    const findgroupchatroom = await prisma.chatRoom.findMany({
+    const rooms = await prisma.chatRoom.findMany({
       where: {
         type: "GROUP",
-        // creatorId: id
         chatRoomParticipants: {
           some: {
             OR: [
-              { userId: id },   // Check for user participation
-              { adminId: id }    // Check for admin participation
-            ]
-          }
-        }
+              { userIds: { array_contains: id } },
+              { adminIds: { array_contains: id } },
+            ],
+          },
+        },
       },
       include: {
-        // Include chat room participants' information
-        chatRoomParticipants: {
-          select: {
-            userId: true,
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true
-              }
-            },
-            adminId: true,
-            admin: {
-              select: {
-                id: true,
-                name: true,  // Admin name
-                email: true  // Optional admin email
-              }
-            }
-          }
-        },
-        // Include messages, ordered by createdAt (descending)
+        chatRoomParticipants: { select: { userIds: true, adminIds: true } },
         messages: {
           orderBy: { createdAt: "desc" },
+          take: 1, // last message only (adjust as needed)
           include: {
-            sender: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true
-              }
-            }
-          }
-        }
+            sender: { select: { id: true, firstName: true, lastName: true, image: true } },
+          },
+        },
       },
-      orderBy: {
-        updatedAt: "desc"
-      }
+      orderBy: { updatedAt: "desc" },
     });
 
-    // If no chat rooms are found, throw an error
-    if (!findgroupchatroom.length) {
-      throw new NotFoundError("Group chat rooms not found");
-    }
+    if (!rooms.length) throw new NotFoundError("Group chat rooms not found");
 
-    const result = findgroupchatroom.map((room) => ({
-      ...room,
-      memberCount: room.chatRoomParticipants.length,
-      participants: room.chatRoomParticipants.map(p => p.userId || p.adminId)
-    }));
+    // hydrate user profiles (optional—remove if you don't need names/images)
+    const allUserIds = Array.from(new Set(
+      rooms.flatMap(r =>
+        r.chatRoomParticipants.flatMap(p => Array.isArray(p.userIds) ? p.userIds : [])
+      )
+    ));
 
-    handlerOk(res, 200, result, 'Group chat rooms found successfully');
+    const users = allUserIds.length
+      ? await prisma.user.findMany({
+        where: { id: { in: allUserIds } },
+        select: { id: true, firstName: true, lastName: true, image: true },
+      })
+      : [];
+
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const result = rooms.map(r => {
+      const pRows = r.chatRoomParticipants;
+      const userIds = Array.from(new Set(pRows.flatMap(p => Array.isArray(p.userIds) ? p.userIds : [])));
+      const adminIds = Array.from(new Set(pRows.flatMap(p => Array.isArray(p.adminIds) ? p.adminIds : [])));
+
+      return {
+        id: r.id,
+        type: r.type,
+        name: r.name,
+        description: r.description,
+        image: r.image,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        lastMessage: r.messages?.[0] ?? null,
+        memberCount: userIds.length + adminIds.length, // one participant row per room → compute from arrays
+        participants: {
+          users: userIds.map(uid => userMap.get(uid) ?? { id: uid }), // hydrate if available
+          adminIds,
+        },
+      };
+    });
+
+    handlerOk(res, 200, result, "Group chat rooms found successfully");
   } catch (error) {
     next(error);
   }
@@ -266,62 +255,88 @@ const getFeatureGroups = async (req, res, next) => {
   try {
     const { id: userId } = req.user;
 
-    const otherGroups = await prisma.chatRoom.findMany({
+    // 1) Pull groups not created by this user
+    const groups = await prisma.chatRoom.findMany({
       where: {
         type: "GROUP",
-        creatorId: {
-          not: userId
-        }
+        creatorId: { not: userId },
       },
       include: {
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            image: true
-          }
-        },
-        chatRoomParticipants: {  // Corrected: Use chatRoomParticipants instead of participants
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true
-              }
-            }
-          }
-        },
+        creator: { select: { id: true, firstName: true, lastName: true, image: true } },
+        chatRoomParticipants: { select: { userIds: true, adminIds: true } }, // JSON arrays
         messages: {
-          orderBy: {
-            createdAt: "desc"
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: {
+            sender: { select: { id: true, firstName: true, lastName: true, image: true } },
           },
-          take: 1
-        }
+        },
       },
-      orderBy: {
-        updatedAt: "desc"
-      }
+      orderBy: { updatedAt: "desc" },
     });
 
-    if (!otherGroups || otherGroups.length === 0) {
-      throw new NotFoundError("No featured groups found");
+    if (!groups.length) throw new NotFoundError("No featured groups found");
+
+    // 2) Collect all user/admin IDs to hydrate profiles
+    const userIdSet = new Set();
+    const adminIdSet = new Set();
+
+    for (const g of groups) {
+      for (const p of g.chatRoomParticipants) {
+        (Array.isArray(p.userIds) ? p.userIds : []).forEach(uid => userIdSet.add(uid));
+        (Array.isArray(p.adminIds) ? p.adminIds : []).forEach(aid => adminIdSet.add(aid));
+      }
     }
 
-    const result = otherGroups.map((room) => {
-      const isUserInGroup = room.chatRoomParticipants.some(p => p.user.id === userId);
+    const [userProfiles, adminProfiles] = await Promise.all([
+      userIdSet.size
+        ? prisma.user.findMany({
+          where: { id: { in: Array.from(userIdSet) } },
+          select: { id: true, firstName: true, lastName: true, image: true },
+        })
+        : Promise.resolve([]),
+      adminIdSet.size
+        ? prisma.admin.findMany({
+          where: { id: { in: Array.from(adminIdSet) } },
+          select: { id: true, name: true, email: true, image: true },
+        })
+        : Promise.resolve([]),
+    ]);
+
+    const userMap = new Map(userProfiles.map(u => [u.id, u]));
+    const adminMap = new Map(adminProfiles.map(a => [a.id, a]));
+
+    // 3) Shape the response
+    const result = groups.map(g => {
+      const userIds = Array.from(
+        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.userIds) ? p.userIds : [])))
+      );
+      const adminIds = Array.from(
+        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.adminIds) ? p.adminIds : [])))
+      );
+
+      const isRequesterInGroup = userIds.includes(userId) || adminIds.includes(userId);
 
       return {
-        ...room,
-        messages: isUserInGroup ? room.messages : [],
-        memberCount: room.chatRoomParticipants.length,  // Use chatRoomParticipants here
-        participants: room.chatRoomParticipants.map(p => p.user)  // Same here
+        id: g.id,
+        type: g.type,
+        name: g.name,
+        description: g.description,
+        image: g.image,
+        creator: g.creator,
+        createdAt: g.createdAt,
+        updatedAt: g.updatedAt,
+        // hide last message if requester isn't a member
+        messages: isRequesterInGroup ? g.messages : [],
+        memberCount: userIds.length + adminIds.length,
+        participants: {
+          users: userIds.map(uid => userMap.get(uid) || { id: uid }),
+          admins: adminIds.map(aid => adminMap.get(aid) || { id: aid }),
+        },
       };
     });
 
-    handlerOk(res, 200, result, 'Featured groups fetched successfully');
+    handlerOk(res, 200, result, "Featured groups fetched successfully");
   } catch (error) {
     next(error);
   }
@@ -396,6 +411,73 @@ const uploadAttachment = async (req, res, next) => {
   }
 };
 
+const addparticipantInChatRoom = async (req, res, next) => {
+  try {
+    const { id: requesterId, userType } = req.user;
+    const { chatRoomId } = req.params;
+
+    if (!requesterId || !chatRoomId) {
+      return handlerOk(res, 400, "Missing userId or chatRoomId", null);
+    }
+
+    // Ensure room exists
+    const room = await prisma.chatRoom.findUnique({ where: { id: chatRoomId } });
+    if (!room) throw new NotFoundError("chat room not found");
+
+    // Fetch (or create) the single participants row for this room
+    let row = await prisma.chatRoomParticipant.findFirst({ where: { chatRoomId } });
+
+    // Normalize arrays
+    const asArray = (v) => (Array.isArray(v) ? v : []);
+    if (!row) {
+      // ✅ both JSON fields required on create
+      const initialUserIds = userType === "USER" ? [requesterId] : [];
+      const initialAdminIds = userType === "ADMIN" ? [requesterId] : [];
+      row = await prisma.chatRoomParticipant.create({
+        data: { chatRoomId, userIds: initialUserIds, adminIds: initialAdminIds },
+      });
+      return handlerOk(res, 201, "chatroom updated successfully", row);
+    }
+
+    const currentUsers = asArray(row.userIds);
+    const currentAdmins = asArray(row.adminIds);
+
+    // Decide which list to add to based on requester type (adjust if you want to add others)
+    let nextUsers = currentUsers;
+    let nextAdmins = currentAdmins;
+
+    if (userType === "USER") {
+      if (currentUsers.includes(requesterId)) {
+        return handlerOk(res, 200, "already a participant", row);
+      }
+      nextUsers = Array.from(new Set([...currentUsers, requesterId]));
+    } else if (userType === "ADMIN") {
+      if (currentAdmins.includes(requesterId)) {
+        return handlerOk(res, 200, "already a participant", row);
+      }
+      nextAdmins = Array.from(new Set([...currentAdmins, requesterId]));
+    } else {
+      // Fallback: treat as user
+      if (!currentUsers.includes(requesterId)) {
+        nextUsers = Array.from(new Set([...currentUsers, requesterId]));
+      } else {
+        return handlerOk(res, 200, "already a participant", row);
+      }
+    }
+
+    const updated = await prisma.chatRoomParticipant.update({
+      where: { id: row.id },              // update by PK
+      data: { userIds: nextUsers, adminIds: nextAdmins },
+    });
+
+    handlerOk(res, 200, "chatroom updated successfully", updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 
 
 module.exports = {
@@ -404,5 +486,6 @@ module.exports = {
   getOneToOneChatRooms,
   getGroupChatRooms,
   getFeatureGroups,
-  uploadAttachment
+  uploadAttachment,
+  addparticipantInChatRoom
 }

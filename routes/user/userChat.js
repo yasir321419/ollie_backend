@@ -57,4 +57,15 @@ userChatRouter.post(
   userChatController.uploadAttachment
 );
 
+
+userChatRouter.post(
+  "/addparticipantInChatRoom/:chatRoomId",
+  limiter,
+  verifyUserToken,
+  validateRequest(userSentAttachmentSchema),
+  userChatController.addparticipantInChatRoom
+);
+
+
+
 module.exports = userChatRouter;
