@@ -2,6 +2,7 @@ const prisma = require("../../config/prismaConfig");
 
 
 
+
 const sendMessage = async (io, socket, data) => {
   const { chatroom, message } = data;
   const userId = socket.userId;
@@ -14,9 +15,10 @@ const sendMessage = async (io, socket, data) => {
     where: { id: chatroom },
     include: {
       chatRoomParticipants: {
+        // Accessing the userIds and adminIds
         select: {
-          userId: true,
-          adminId: true
+          userIds: true, // Now using userIds
+          adminIds: true // Now using adminIds
         }
       }
     }
@@ -32,7 +34,8 @@ const sendMessage = async (io, socket, data) => {
 
   // Check if user is a participant of the chat room
   const isParticipant = chatRoomData.chatRoomParticipants.some(
-    (p) => p.userId === userId || p.adminId === userId
+    (p) =>
+      p.userIds.includes(userId) || p.adminIds.includes(userId) // Checking userIds and adminIds arrays
   );
 
   if (!isParticipant) {
@@ -81,30 +84,29 @@ const sendMessage = async (io, socket, data) => {
   console.log("New message saved:", newMessage);
 
   // Emit the message to the chatroom and all participants
-  chatRoomData.chatRoomParticipants.forEach((p) => {
-    const recipientId = p.userId || p.adminId;
-    if (recipientId) {
-      console.log("Emitting message to recipient:", recipientId);
-      io.to(recipientId).emit("message", {
-        status: "success",
-        data: newMessage,
-        message: "Message sent successfully",
-      });
-    }
-  });
+  // chatRoomData.chatRoomParticipants.forEach((p) => {
+  //   // Loop through userIds and adminIds and emit the message to them
+  //   const allParticipants = [...p.userIds, ...p.adminIds];
 
-  // Alternatively, you can emit the message to the entire chatroom by emitting to the chatroomId itself:
-  // io.to(chatroom).emit("message", { status: "success", data: newMessage, message: "Message sent successfully" });
+  //   allParticipants.forEach((recipientId) => {
+  //     if (recipientId) {
+  //       console.log("Emitting message to recipient:", recipientId);
+  //       io.to(recipientId).emit("message", {
+  //         status: "success",
+  //         data: newMessage,
+  //         message: "Message sent successfully",
+  //       });
+  //     }
+  //   });
+  // });
 
   // Optionally, emit the success message to the sender
-  // return socket.emit("message", {
-  //   status: "success",
-  //   data: newMessage,
-  //   message: "Message sent successfully",
-  // });
+  return socket.emit("message", {
+    status: "success",
+    data: newMessage,
+    message: "Message sent successfully",
+  });
 };
-
-
 
 
 const getChatRoomData = async (socket, data) => {
@@ -116,27 +118,12 @@ const getChatRoomData = async (socket, data) => {
       where: { id: chatroomId },
       include: {
         chatRoomParticipants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                image: true,
-              }
-            },
-            admin: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              }
-            }
-          }
+          // No need to include userIds and adminIds here
         },
         messages: {
-          // orderBy: { createdAt: "desc" },  // Sorting by `createdAt`
-          // take: 10,
+          orderBy: {
+            createdAt: "desc"
+          },
           include: {
             sender: {
               select: {
@@ -151,7 +138,6 @@ const getChatRoomData = async (socket, data) => {
       }
     });
 
-
     if (!chatRoomData) {
       console.log("Chat room not found for ID:", chatroomId);
       return socket.emit("getRoom", {
@@ -160,21 +146,45 @@ const getChatRoomData = async (socket, data) => {
       });
     }
 
-    const isParticipant = chatRoomData.chatRoomParticipants.some(
-      (participant) =>
-        participant.userId === userId || participant.adminId === userId
-    );
+    // Get the participants (users and admins)
+    const userIds = chatRoomData.chatRoomParticipants.flatMap(p => p.userIds);
+    const adminIds = chatRoomData.chatRoomParticipants.flatMap(p => p.adminIds);
 
-    if (!isParticipant) {
-      return socket.emit("getRoom", {
-        status: "error",
-        message: "You are not a participant in this chat room"
-      });
-    }
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: userIds }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        image: true
+      }
+    });
+
+    const admins = await prisma.admin.findMany({
+      where: {
+        id: { in: adminIds }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true
+      }
+    });
+
+    // Now attach the user and admin data to the chatRoomData
+    const updatedChatRoomData = {
+      ...chatRoomData,
+      participants: {
+        users,
+        admins
+      }
+    };
 
     return socket.emit("getRoom", {
       status: "success",
-      data: chatRoomData
+      data: updatedChatRoomData
     });
 
   } catch (err) {
@@ -185,6 +195,8 @@ const getChatRoomData = async (socket, data) => {
     });
   }
 };
+
+
 
 
 
