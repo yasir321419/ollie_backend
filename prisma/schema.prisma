@@ -133,9 +133,11 @@ model UserPost {
   id         String          @id @default(uuid())
   title      String
   content    String
+  categoryId String
   image      String?
   userId     String
   views      Int           @default(0) // 👈 Add this line  
+  category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userpostlikes      UserPostLike[]
   createdAt  DateTime     @default(now())
@@ -353,6 +355,8 @@ model Interest {
   Blog Blog[]
 
   SavedTopic SavedTopic[]
+
+  UserPost UserPost[]
 }
 
 model PostRequest {

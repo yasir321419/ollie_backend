@@ -8,7 +8,7 @@ const handleMultiPartData = require("../../middleware/multiPartData");
 
 
 userPostRouter.post(
-  "/createUserPost",
+  "/createUserPost/:categoryId",
   limiter,
   verifyUserToken,
   validateRequest(userCreatePostSchema),

@@ -8,11 +8,19 @@ const sendNotification = require("../../utils/notification");
 const createUserPost = async (req, res, next) => {
   try {
     const { postTitle, postContent } = req.body;
+    const { categoryId } = req.params;
 
     const { id, firstName, deviceToken } = req.user;
 
     await checkUserSubscription(id, "your package has expired Upgrade your plan to create the post");
     await checkAndDeductUserCredit(id, "you have no credits left to create the post");
+
+    const findcategory = await prisma.interest.findUnique({ where: { id: categoryId } })
+
+
+    if (!findcategory) {
+      throw new NotFoundError("blog category not found")
+    }
 
     const file = req.file;
     if (!file) {
@@ -29,10 +37,12 @@ const createUserPost = async (req, res, next) => {
         title: postTitle,
         content: postContent,
         image: postImage,
-        userId: id
+        userId: id,
+        categoryId: findcategory.id
       },
       include: {
-        user: true
+        user: true,
+        category: true
       }
     });
 

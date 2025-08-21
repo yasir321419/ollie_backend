@@ -3,6 +3,7 @@ const Joi = require("joi");
 const userCreatePostSchema = Joi.object({
   query: Joi.object({}),
   params: Joi.object({
+    categoryId: Joi.string().required()
   }),
   body: Joi.object({
     postTitle: Joi.string().required(),
