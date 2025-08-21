@@ -122,7 +122,7 @@ const getChatRoomData = async (socket, data) => {
         },
         messages: {
           orderBy: {
-            createdAt: "desc"
+            // createdAt: "desc"
           },
           include: {
             sender: {

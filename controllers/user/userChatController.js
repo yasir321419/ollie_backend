@@ -251,96 +251,96 @@ const getGroupChatRooms = async (req, res, next) => {
 
 
 
-const getFeatureGroups = async (req, res, next) => {
-  try {
-    const { id: userId } = req.user;
+// const getFeatureGroups = async (req, res, next) => {
+//   try {
+//     const { id: userId } = req.user;
 
-    // 1) Pull groups not created by this user
-    const groups = await prisma.chatRoom.findMany({
-      where: {
-        type: "GROUP",
-        creatorId: { not: userId },
-      },
-      include: {
-        creator: { select: { id: true, firstName: true, lastName: true, image: true } },
-        chatRoomParticipants: { select: { userIds: true, adminIds: true } }, // JSON arrays
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          include: {
-            sender: { select: { id: true, firstName: true, lastName: true, image: true } },
-          },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+//     // 1) Pull groups not created by this user
+//     const groups = await prisma.chatRoom.findMany({
+//       where: {
+//         type: "GROUP",
+//         creatorId: { not: userId },
+//       },
+//       include: {
+//         creator: { select: { id: true, firstName: true, lastName: true, image: true } },
+//         chatRoomParticipants: { select: { userIds: true, adminIds: true } }, // JSON arrays
+//         messages: {
+//           orderBy: { createdAt: "desc" },
+//           take: 1,
+//           include: {
+//             sender: { select: { id: true, firstName: true, lastName: true, image: true } },
+//           },
+//         },
+//       },
+//       orderBy: { updatedAt: "desc" },
+//     });
 
-    if (!groups.length) throw new NotFoundError("No featured groups found");
+//     if (!groups.length) throw new NotFoundError("No featured groups found");
 
-    // 2) Collect all user/admin IDs to hydrate profiles
-    const userIdSet = new Set();
-    const adminIdSet = new Set();
+//     // 2) Collect all user/admin IDs to hydrate profiles
+//     const userIdSet = new Set();
+//     const adminIdSet = new Set();
 
-    for (const g of groups) {
-      for (const p of g.chatRoomParticipants) {
-        (Array.isArray(p.userIds) ? p.userIds : []).forEach(uid => userIdSet.add(uid));
-        (Array.isArray(p.adminIds) ? p.adminIds : []).forEach(aid => adminIdSet.add(aid));
-      }
-    }
+//     for (const g of groups) {
+//       for (const p of g.chatRoomParticipants) {
+//         (Array.isArray(p.userIds) ? p.userIds : []).forEach(uid => userIdSet.add(uid));
+//         (Array.isArray(p.adminIds) ? p.adminIds : []).forEach(aid => adminIdSet.add(aid));
+//       }
+//     }
 
-    const [userProfiles, adminProfiles] = await Promise.all([
-      userIdSet.size
-        ? prisma.user.findMany({
-          where: { id: { in: Array.from(userIdSet) } },
-          select: { id: true, firstName: true, lastName: true, image: true },
-        })
-        : Promise.resolve([]),
-      adminIdSet.size
-        ? prisma.admin.findMany({
-          where: { id: { in: Array.from(adminIdSet) } },
-          select: { id: true, name: true, email: true, image: true },
-        })
-        : Promise.resolve([]),
-    ]);
+//     const [userProfiles, adminProfiles] = await Promise.all([
+//       userIdSet.size
+//         ? prisma.user.findMany({
+//           where: { id: { in: Array.from(userIdSet) } },
+//           select: { id: true, firstName: true, lastName: true, image: true },
+//         })
+//         : Promise.resolve([]),
+//       adminIdSet.size
+//         ? prisma.admin.findMany({
+//           where: { id: { in: Array.from(adminIdSet) } },
+//           select: { id: true, name: true, email: true, image: true },
+//         })
+//         : Promise.resolve([]),
+//     ]);
 
-    const userMap = new Map(userProfiles.map(u => [u.id, u]));
-    const adminMap = new Map(adminProfiles.map(a => [a.id, a]));
+//     const userMap = new Map(userProfiles.map(u => [u.id, u]));
+//     const adminMap = new Map(adminProfiles.map(a => [a.id, a]));
 
-    // 3) Shape the response
-    const result = groups.map(g => {
-      const userIds = Array.from(
-        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.userIds) ? p.userIds : [])))
-      );
-      const adminIds = Array.from(
-        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.adminIds) ? p.adminIds : [])))
-      );
+//     // 3) Shape the response
+//     const result = groups.map(g => {
+//       const userIds = Array.from(
+//         new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.userIds) ? p.userIds : [])))
+//       );
+//       const adminIds = Array.from(
+//         new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.adminIds) ? p.adminIds : [])))
+//       );
 
-      const isRequesterInGroup = userIds.includes(userId) || adminIds.includes(userId);
+//       const isRequesterInGroup = userIds.includes(userId) || adminIds.includes(userId);
 
-      return {
-        id: g.id,
-        type: g.type,
-        name: g.name,
-        description: g.description,
-        image: g.image,
-        creator: g.creator,
-        createdAt: g.createdAt,
-        updatedAt: g.updatedAt,
-        // hide last message if requester isn't a member
-        messages: isRequesterInGroup ? g.messages : [],
-        memberCount: userIds.length + adminIds.length,
-        participants: {
-          users: userIds.map(uid => userMap.get(uid) || { id: uid }),
-          admins: adminIds.map(aid => adminMap.get(aid) || { id: aid }),
-        },
-      };
-    });
+//       return {
+//         id: g.id,
+//         type: g.type,
+//         name: g.name,
+//         description: g.description,
+//         image: g.image,
+//         creator: g.creator,
+//         createdAt: g.createdAt,
+//         updatedAt: g.updatedAt,
+//         // hide last message if requester isn't a member
+//         messages: isRequesterInGroup ? g.messages : [],
+//         memberCount: userIds.length + adminIds.length,
+//         participants: {
+//           users: userIds.map(uid => userMap.get(uid) || { id: uid }),
+//           admins: adminIds.map(aid => adminMap.get(aid) || { id: aid }),
+//         },
+//       };
+//     });
 
-    handlerOk(res, 200, result, "Featured groups fetched successfully");
-  } catch (error) {
-    next(error);
-  }
-};
+//     handlerOk(res, 200, result, "Featured groups fetched successfully");
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 
 
@@ -357,9 +357,9 @@ const uploadAttachment = async (req, res, next) => {
       },
       include: {
         chatRoomParticipants: {
-          select: {
-            userId: true
-          }
+          // select: {
+          //   userId: true
+          // }
         }
       }
     });
@@ -398,7 +398,7 @@ const uploadAttachment = async (req, res, next) => {
     // ✅ Emit message to chat participants via socket
     const io = req.app.get('io'); // You need to expose `io` in your app
     findChatRoom.chatRoomParticipants.forEach((p) => {
-      io.to(p.userId.toString()).emit("message", {
+      io.to(p.toString()).emit("message", {
         status: "success",
         data: newMessage,
       });
@@ -476,6 +476,98 @@ const addparticipantInChatRoom = async (req, res, next) => {
   }
 };
 
+const getFeatureGroups = async (req, res, next) => {
+  try {
+    const { id: userId } = req.user;
+    console.log(userId);
+
+
+    // 1) Pull groups that were **not** created by this user
+    const groups = await prisma.chatRoom.findMany({
+      where: {
+        type: "GROUP",
+        creatorId: { not: userId }, // Exclude groups created by the logged-in user
+      },
+      include: {
+        creator: { select: { id: true, firstName: true, lastName: true, image: true } },
+        chatRoomParticipants: { select: { userIds: true, adminIds: true } },
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: {
+            sender: { select: { id: true, firstName: true, lastName: true, image: true } },
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!groups.length) throw new NotFoundError("No featured groups found");
+
+    // 2) Collect all user/admin IDs to hydrate profiles
+    const userIdSet = new Set();
+    const adminIdSet = new Set();
+
+    for (const g of groups) {
+      for (const p of g.chatRoomParticipants) {
+        (Array.isArray(p.userIds) ? p.userIds : []).forEach(uid => userIdSet.add(uid));
+        (Array.isArray(p.adminIds) ? p.adminIds : []).forEach(aid => adminIdSet.add(aid));
+      }
+    }
+
+    const [userProfiles, adminProfiles] = await Promise.all([
+      userIdSet.size
+        ? prisma.user.findMany({
+          where: { id: { in: Array.from(userIdSet) } },
+          select: { id: true, firstName: true, lastName: true, image: true },
+        })
+        : Promise.resolve([]),
+      adminIdSet.size
+        ? prisma.admin.findMany({
+          where: { id: { in: Array.from(adminIdSet) } },
+          select: { id: true, name: true, email: true, image: true },
+        })
+        : Promise.resolve([]),
+    ]);
+
+    const userMap = new Map(userProfiles.map(u => [u.id, u]));
+    const adminMap = new Map(adminProfiles.map(a => [a.id, a]));
+
+    // 3) Shape the response
+    const result = groups.map(g => {
+      const userIds = Array.from(
+        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.userIds) ? p.userIds : [])))
+      );
+      const adminIds = Array.from(
+        new Set(g.chatRoomParticipants.flatMap(p => (Array.isArray(p.adminIds) ? p.adminIds : [])))
+      );
+
+      const isRequesterInGroup = userIds.includes(userId) || adminIds.includes(userId);
+
+      return {
+        id: g.id,
+        type: g.type,
+        name: g.name,
+        description: g.description,
+        image: g.image,
+        creator: g.creator,
+        createdAt: g.createdAt,
+        updatedAt: g.updatedAt,
+        // hide last message if requester isn't a member
+        messages: isRequesterInGroup ? g.messages : [],
+        memberCount: userIds.length + adminIds.length,
+        participants: {
+          users: userIds.map(uid => userMap.get(uid) || { id: uid }),
+          admins: adminIds.map(aid => adminMap.get(aid) || { id: aid }),
+        },
+      };
+    });
+
+    handlerOk(res, 200, result, "Featured groups fetched successfully");
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 

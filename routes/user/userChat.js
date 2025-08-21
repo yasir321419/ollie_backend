@@ -4,7 +4,7 @@ const validateRequest = require("../../middleware/validateRequest");
 
 const userChatRouter = require("express").Router();
 const userChatController = require("../../controllers/user/userChatController");
-const { userSentAttachmentSchema, userCreateOneToOneChatRoomSchema, userCreateGroupChatRoomSchema } = require("../../schema/user/chat");
+const { userSentAttachmentSchema, userCreateOneToOneChatRoomSchema, userCreateGroupChatRoomSchema, userAddInChatRoomSchema } = require("../../schema/user/chat");
 const { verifyUserToken } = require("../../middleware/auth");
 const handleMultiPartData = require("../../middleware/multiPartData");
 
@@ -62,7 +62,7 @@ userChatRouter.post(
   "/addparticipantInChatRoom/:chatRoomId",
   limiter,
   verifyUserToken,
-  validateRequest(userSentAttachmentSchema),
+  validateRequest(userAddInChatRoomSchema),
   userChatController.addparticipantInChatRoom
 );
 
