@@ -1,32 +1,51 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
 name: Node.js CI
 
 on:
   push:
-    branches: [ "main" ]
-  
-    
+    branches: 
+      - "main"  # Runs this workflow on pushes to the main branch
 
 jobs:
   build:
-
-    runs-on: self-hosted
+    runs-on: self-hosted  # Running the job on a self-hosted runner
 
     strategy:
       matrix:
-        node-version: [22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        node-version: [22.x]  # Specify the Node.js version(s) for testing
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: pm2 restart index.js
-    
+      # Checkout the code from the repository
+      - uses: actions/checkout@v4
+      
+      # Create .env file from secrets (environment variables for the app)
+      - name: Create .env file from secrets
+        run: |
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "PORT=${{ secrets.PORT }}" >> .env
+          echo "API_PREFIX=${{ secrets.API_PREFIX }}" >> .env  # Corrected typo: "API_PRIFEX" -> "API_PREFIX"
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "MAIL_SERVICE=${{ secrets.MAIL_SERVICE }}" >> .env
+          echo "MAIL_HOST=${{ secrets.MAIL_HOST }}" >> .env
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "MAIL_ENCRYPTION=${{ secrets.MAIL_ENCRYPTION }}" >> .env
+          echo "MAIL_PORT=${{ secrets.MAIL_PORT }}" >> .env
+          echo "MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME }}" >> .env
+
+      # Use the specified Node.js version from the matrix
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}  # Use version defined in the matrix
+          cache: 'npm'  # Cache npm dependencies for faster builds
+
+      # Install dependencies using npm ci (this ensures a clean installation based on package-lock.json)
+      - run: npm ci
+      
+      # Build the application (if build step is defined in package.json)
+      - run: npm run build --if-present  # "--if-present" ensures the step is skipped if no build script is defined
+
+      # Restart the app using PM2 (make sure PM2 is set up on the self-hosted runner)
+      - name: Restart app using PM2
+        run: pm2 restart index.js  # Adjust the app entry point if necessary
