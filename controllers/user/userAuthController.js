@@ -557,7 +557,8 @@ const userLogin = async (req, res, next) => {
             include: {
                 Wallet: true,
                 ConnectPurchase: true,
-                UserSubscription: true
+                UserSubscription: true,
+                interests: true
                 // {
                 //     // include: {
                 //     //     SubscriptionPlan: true
@@ -716,6 +717,37 @@ const userDeleteAccount = async (req, res, next) => {
     }
 };
 
+const getMe = async (req, res, next) => {
+    try {
+        const { id } = req.user;
+
+        const finduser = await prisma.user.findUnique({
+            where: {
+                id
+            },
+            include: {
+                Wallet: true,
+                ConnectPurchase: true,
+                UserSubscription: true,
+                interests: true
+            }
+        });
+
+        const token = genToken({
+            id: finduser.id,
+            userType: userConstants.USER
+        });
+
+        const response = {
+            userToken: token
+        }
+
+        handlerOk(res, 200, { ...finduser, ...response }, 'user found successfully')
+    } catch (error) {
+        next(error)
+    }
+}
+
 
 module.exports = {
     userRegister,
@@ -728,6 +760,7 @@ module.exports = {
     userLogOut,
     userDeleteAccount,
     resendOtp,
-    createProfile
+    createProfile,
+    getMe
 
 }

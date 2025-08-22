@@ -89,6 +89,13 @@ userAuthRouter.post(
   userAuthController.createProfile
 );
 
+userAuthRouter.get(
+  "/getMe",
+  limiter,
+  verifyUserToken,
+  userAuthController.getMe
+);
+
 
 
 

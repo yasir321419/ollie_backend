@@ -454,6 +454,7 @@ const likeAndReplyOnUserPostComment = async (req, res, next) => {
   }
 }
 
+
 const showUserPostCommentLikeReply = async (req, res, next) => {
   try {
     const comment = await prisma.userPostComment.findMany({
@@ -509,13 +510,16 @@ const showUserPostCommentLikeReply = async (req, res, next) => {
   }
 }
 
+
 const showAllPostByInterest = async (req, res, next) => {
   try {
+    const { id } = req.user;
     const { topicsId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    // Find the selected topic
     const findtopic = await prisma.interest.findUnique({
       where: {
         id: topicsId
@@ -523,43 +527,69 @@ const showAllPostByInterest = async (req, res, next) => {
     });
 
     if (!findtopic) {
-      throw new NotFoundError("topic not found")
+      throw new NotFoundError("Topic not found");
     }
 
+    // Fetch posts related to the selected topic
     const findpostbytopics = await Promise.all([
       prisma.post.findMany({
         where: { categoryId: findtopic.id },
         include: {
           category: true,
+          admin: true,
           _count: { select: { PostLike: true, postcomments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          },
+          PostLike: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
         },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.userPost.count({
+      prisma.post.count({
         where: { categoryId: findtopic.id }
       }),
     ]);
 
-    if (findpostbytopics.length === 0) {
-      throw new NotFoundError("blogs not found")
+    // Destructure the results
+    const posts = findpostbytopics[0];
+    const totalCount = findpostbytopics[1];
+
+    // Add `isSavePost` and `isLikePost` flag to each post from the topic
+    posts.forEach(post => {
+      post.isSavePost = post.savedByUsers.length > 0;
+      post.isLikePost = post.PostLike.length > 0;
+    });
+
+    if (posts.length === 0) {
+      throw new NotFoundError("No posts found");
     }
-    const [posts, totalCount] = findpostbytopics;
 
-    // Keep `data` as the array; add `totalCount` at top level
-
+    // Return the posts with total count
     return res.status(200).json({
       success: true,
-      message: "Post found successfully",
+      message: "Posts found successfully",
       data: posts,
-      totalCount,
+      totalCount
     });
 
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 
 
@@ -570,62 +600,129 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    // Get user interests
     const finduserinterest = await prisma.user.findUnique({
-      where: {
-        id
-      },
-      include: {
-        interests: true
-      }
+      where: { id },
+      include: { interests: true },
     });
 
     console.log(finduserinterest, 'finduserinterest');
 
+    // Get the list of interests (interest IDs)
+    const interestIds = finduserinterest?.interests.map(i => i.id);
 
-    const interestIds = finduserinterest.interests.map(i => i.id);
-
-    // If user has no interests, return empty array (still a 200)
-    if (interestIds.length === 0) {
-      throw new NotFoundError("user interest not found")
+    // If user has no interests, throw error
+    if (!interestIds || interestIds.length === 0) {
+      throw new NotFoundError("User has no selected interests");
     }
 
-
+    // Fetch posts related to those interests
     const findpostbyinterest = await Promise.all([
       prisma.post.findMany({
-        where: { categoryId: { in: interestIds } },
+        where: {
+          categoryId: { in: interestIds }
+        },
         include: {
           category: true,
           _count: { select: { PostLike: true, postcomments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          },
+          PostLike: { // Correct relation from Post model, not UserPost
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
         },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
       prisma.post.count({
-        where: { categoryId: { in: interestIds } },
+        where: {
+          categoryId: { in: interestIds }
+        },
       }),
+      // Fetch user’s posts
+      prisma.userPost.findMany({
+        where: {
+          userId: id
+        },
+        include: {
+          user: true,
+          _count: { select: { userpostlikes: true, userpostcomments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          },
+          userpostlikes: { // Correct relation to userpostlikes
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
+        },
+        skip,
+        take: limit,
+      })
     ]);
 
-    if (findpostbyinterest.length === 0) {
-      throw new NotFoundError("post not found")
-    }
-    const [posts, totalCount] = findpostbyinterest;
+    // Destructure the results
+    const posts = findpostbyinterest[0];
+    const totalCount = findpostbyinterest[1];
+    const userPosts = findpostbyinterest[2];
 
-    if (!findpostbyinterest) {
-      throw new NotFoundError("post not found")
+    // Add `isSavePost` and `isLikePost` flag to each post from the topic
+    posts.forEach(post => {
+      post.isSavePost = post.savedByUsers.length > 0;
+      post.isLikePost = post.PostLike.length > 0;
+    });
+
+    // Add `isSavePost` and `isLikePost` flag to each user post
+    userPosts.forEach(userpost => {
+      userpost.isSavePost = userpost.savedByUsers.length > 0;
+      userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
+    });
+
+    // Combine posts from interests and user posts
+    const allPosts = [...posts, ...userPosts];
+
+    // If no posts found
+    if (allPosts.length === 0) {
+      throw new NotFoundError("No posts found");
     }
 
+    // Return the combined posts with total count
     return res.status(200).json({
       success: true,
-      message: "Post found successfully",
-      data: posts,
+      message: "Posts found successfully",
+      data: allPosts,
       totalCount,
     });
 
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+
+
+
+
 
 
 module.exports = {
