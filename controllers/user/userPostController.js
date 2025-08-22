@@ -94,7 +94,7 @@ const showUserAllPost = async (req, res, next) => {
 
     handlerOk(res, 200,
 
-      showuserposts
+      ...showuserposts
 
       , 'user posts found successfully');
 
@@ -509,6 +509,123 @@ const showUserPostCommentLikeReply = async (req, res, next) => {
   }
 }
 
+const showAllPostByInterest = async (req, res, next) => {
+  try {
+    const { topicsId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const findtopic = await prisma.interest.findUnique({
+      where: {
+        id: topicsId
+      }
+    });
+
+    if (!findtopic) {
+      throw new NotFoundError("topic not found")
+    }
+
+    const findpostbytopics = await Promise.all([
+      prisma.post.findMany({
+        where: { categoryId: findtopic.id },
+        include: {
+          category: true,
+          _count: { select: { PostLike: true, postcomments: true } },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.userPost.count({
+        where: { categoryId: findtopic.id }
+      }),
+    ]);
+
+    if (findpostbytopics.length === 0) {
+      throw new NotFoundError("blogs not found")
+    }
+    const [posts, totalCount] = findpostbytopics;
+
+    // Keep `data` as the array; add `totalCount` at top level
+
+    return res.status(200).json({
+      success: true,
+      message: "Post found successfully",
+      data: posts,
+      totalCount,
+    });
+
+  } catch (error) {
+    next(error)
+  }
+}
+
+
+
+const showAllPostByUserSelectedInterest = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const finduserinterest = await prisma.user.findUnique({
+      where: {
+        id
+      },
+      include: {
+        interests: true
+      }
+    });
+
+    console.log(finduserinterest, 'finduserinterest');
+
+
+    const interestIds = finduserinterest.interests.map(i => i.id);
+
+    // If user has no interests, return empty array (still a 200)
+    if (interestIds.length === 0) {
+      throw new NotFoundError("user interest not found")
+    }
+
+
+    const findpostbyinterest = await Promise.all([
+      prisma.post.findMany({
+        where: { categoryId: { in: interestIds } },
+        include: {
+          category: true,
+          _count: { select: { PostLike: true, postcomments: true } },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.post.count({
+        where: { categoryId: { in: interestIds } },
+      }),
+    ]);
+
+    if (findpostbyinterest.length === 0) {
+      throw new NotFoundError("post not found")
+    }
+    const [posts, totalCount] = findpostbyinterest;
+
+    if (!findpostbyinterest) {
+      throw new NotFoundError("post not found")
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Post found successfully",
+      data: posts,
+      totalCount,
+    });
+
+  } catch (error) {
+    next(error)
+  }
+}
 
 
 module.exports = {
@@ -520,5 +637,7 @@ module.exports = {
   showUserPostCommentLikeReply,
   showSingleUserPost,
   updateUserPost,
-  deleteUserPost
+  deleteUserPost,
+  showAllPostByInterest,
+  showAllPostByUserSelectedInterest
 }

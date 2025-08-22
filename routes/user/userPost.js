@@ -3,7 +3,7 @@ const validateRequest = require("../../middleware/validateRequest");
 const userPostRouter = require("express").Router();
 const userPostController = require("../../controllers/user/userPostController");
 const { verifyUserToken } = require("../../middleware/auth");
-const { userCreatePostSchema, userShowSinglePostSchema, userCommentPostSchema, userLikeAndReplyCommentPostSchema, userUpdatePostSchema, userAllPostSchema } = require("../../schema/user/post");
+const { userCreatePostSchema, userShowSinglePostSchema, userCommentPostSchema, userLikeAndReplyCommentPostSchema, userUpdatePostSchema, userAllPostSchema, userShowPostByInterestSchema } = require("../../schema/user/post");
 const handleMultiPartData = require("../../middleware/multiPartData");
 
 
@@ -78,6 +78,21 @@ userPostRouter.get(
   limiter,
   verifyUserToken,
   userPostController.showUserPostCommentLikeReply
+);
+
+userPostRouter.get(
+  "/showAllPostByInterest/:topicsId",
+  limiter,
+  verifyUserToken,
+  validateRequest(userShowPostByInterestSchema),
+  userPostController.showAllPostByInterest
+);
+
+userPostRouter.get(
+  "/showAllPostByUserSelectedInterest",
+  limiter,
+  verifyUserToken,
+  userPostController.showAllPostByUserSelectedInterest
 );
 
 

@@ -2,45 +2,45 @@ const limiter = require("../../middleware/limiter");
 const validateRequest = require("../../middleware/validateRequest");
 
 
-const adminPostRouter = require("express").Router();
-const adminPostController = require("../../controllers/admin/adminPostController");
+const adminBlogRouter = require("express").Router();
+const adminBlogController = require("../../controllers/admin/adminBlogController");
 const { adminCreateBlogSchema, adminUpdateBlogSchema, adminDeleteBlogSchema } = require("../../schema/admin/blog");
 const handleMultiPartData = require("../../middleware/multiPartData");
 const { verifyAdminToken } = require("../../middleware/auth");
 
-adminPostRouter.post(
-  "/createPost/:categoryId",
+adminBlogRouter.post(
+  "/createBlog/:categoryId",
   limiter,
   verifyAdminToken,
   validateRequest(adminCreateBlogSchema),
   handleMultiPartData.single("image"),
-  adminPostController.createPost
+  adminBlogController.createBlog
 );
 
 
-adminPostRouter.get(
-  "/getAllPosts",
+adminBlogRouter.get(
+  "/getAllBlogs",
   limiter,
   verifyAdminToken,
-  adminPostController.getAllPosts
+  adminBlogController.getAllBlogs
 );
 
-adminPostRouter.put(
-  "/updatePost/:postId",
+adminBlogRouter.put(
+  "/updateBlog/:postId",
   limiter,
   verifyAdminToken,
   validateRequest(adminUpdateBlogSchema),
   handleMultiPartData.single("image"),
-  adminPostController.updatePost
+  adminBlogController.updateBlog
 );
 
-adminPostRouter.delete(
-  "/deletePost/:postId",
+adminBlogRouter.delete(
+  "/deleteBlog/:postId",
   limiter,
   verifyAdminToken,
   validateRequest(adminDeleteBlogSchema),
-  adminPostController.deletePost
+  adminBlogController.deleteBlog
 );
 
 
-module.exports = adminPostRouter;
+module.exports = adminBlogRouter;

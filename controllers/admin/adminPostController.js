@@ -2,7 +2,7 @@ const prisma = require("../../config/prismaConfig");
 const { BadRequestError, ValidationError, NotFoundError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
 
-const createBlog = async (req, res, next) => {
+const createPost = async (req, res, next) => {
   try {
     const { postTitle, postContent } = req.body;
     const { id } = req.user;
@@ -22,7 +22,7 @@ const createBlog = async (req, res, next) => {
     const basePath = `http://${req.get("host")}/public/uploads/`;
     const blogImage = `${basePath}${filePath}`;
 
-    const createblog = await prisma.blog.create({
+    const createpost = await prisma.post.create({
       data: {
         title: postTitle,
         content: postContent,
@@ -35,33 +35,33 @@ const createBlog = async (req, res, next) => {
       }
     });
 
-    if (!createblog) {
-      throw new ValidationError("blog post not create")
+    if (!createPost) {
+      throw new ValidationError("post not create")
     }
 
-    handlerOk(res, 200, createblog, 'blog created successfully');
+    handlerOk(res, 200, createpost, 'post created successfully');
   } catch (error) {
     next(error)
   }
 }
 
-const getAllBlogs = async (req, res, next) => {
+const getAllPosts = async (req, res, next) => {
   try {
     const { id } = req.user;
 
-    const findblog = await prisma.blog.findMany({ where: { adminId: id }, include: { category: true } });
+    const findpost = await prisma.post.findMany({ where: { adminId: id }, include: { category: true } });
 
-    if (!findblog) {
-      throw new NotFoundError("blog not found")
+    if (!findpost) {
+      throw new NotFoundError("post not found")
     }
 
-    handlerOk(res, 200, findblog, 'blog posts found successfully')
+    handlerOk(res, 200, findpost, 'posts found successfully')
   } catch (error) {
     next(error)
   }
 }
 
-const updateBlog = async (req, res, next) => {
+const updatePost = async (req, res, next) => {
   try {
     const { postTitle, postContent } = req.body;
     const { id } = req.user;
@@ -69,15 +69,15 @@ const updateBlog = async (req, res, next) => {
     const { postId } = req.params;
     const updatedObj = {};
 
-    const findblog = await prisma.blog.findFirst({
+    const findpost = await prisma.post.findFirst({
       where: {
         id: postId,
         adminId: id
       }
     });
 
-    if (!findblog) {
-      throw new NotFoundError("blog not found")
+    if (!findpost) {
+      throw new NotFoundError("post not found")
     }
 
     if (postTitle) {
@@ -95,7 +95,7 @@ const updateBlog = async (req, res, next) => {
       updatedObj.image = image;
     }
 
-    const updateBlog = await prisma.blog.update({
+    const updatePost = await prisma.post.update({
       where: {
         id: postId,
         adminId: id
@@ -103,44 +103,44 @@ const updateBlog = async (req, res, next) => {
       data: updatedObj
     });
 
-    if (!updateBlog) {
-      throw new ValidationError("blog not updated")
+    if (!updatePost) {
+      throw new ValidationError("post not updated")
     }
 
-    handlerOk(res, 200, updateBlog, 'blog updated successfully')
+    handlerOk(res, 200, updatePost, 'post updated successfully')
   } catch (error) {
     next(error)
   }
 }
 
-const deleteBlog = async (req, res, next) => {
+const deletePost = async (req, res, next) => {
   try {
     const { id } = req.user;
     const { postId } = req.params;
 
-    const findBlog = await prisma.blog.findFirst({
+    const findPost = await prisma.post.findFirst({
       where: {
         id: postId,
         adminId: id
       }
     });
 
-    if (!findBlog) {
-      throw new NotFoundError("blog not found")
+    if (!findPost) {
+      throw new NotFoundError("post not found")
     }
 
-    const deleteblog = await prisma.blog.delete({
+    const deletepost = await prisma.post.delete({
       where: {
         id: postId,
         adminId: id
       }
     });
 
-    if (!deleteblog) {
-      throw new ValidationError("blog not delete")
+    if (!deletepost) {
+      throw new ValidationError("post not delete")
     }
 
-    handlerOk(res, 200, null, 'blog deleted successfully')
+    handlerOk(res, 200, null, 'post deleted successfully')
 
   } catch (error) {
     next(error)
@@ -148,8 +148,8 @@ const deleteBlog = async (req, res, next) => {
 }
 
 module.exports = {
-  createBlog,
-  getAllBlogs,
-  updateBlog,
-  deleteBlog
+  createPost,
+  getAllPosts,
+  updatePost,
+  deletePost
 }

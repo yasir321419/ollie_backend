@@ -97,18 +97,10 @@ model Admin {
   Message Message[] @relation("AdminSender")
 
   Credit Credit[]
+
+  Post Post[]
 }
 
-
-// model BlogCategory {
-//   id        Int     @id @default(autoincrement())
-//   name      String  @unique
-//   blogs     Blog[]
-//   adminId   Int                              // ✅ Foreign key to Admin
-//   admin     Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade) // ✅ Relation
-
-//   SavedTopic SavedTopic[]
-// }
 
 model Blog {
   id         String          @id @default(uuid())
@@ -128,6 +120,29 @@ model Blog {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 }
+
+model Post {
+  id         String          @id @default(uuid())
+  title      String
+  content    String @db.LongText
+  image      String?
+  categoryId String
+  adminId    String
+  type       BlogType?
+  views        Int           @default(0) // 👈 Add this line
+
+  category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  admin      Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  // postlikes      PostLike[]
+  postcomments   PostComment[]
+  savedByUsers SavedBlog[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  PostLike PostLike[]
+}
+
+
 
 model UserPost {
   id         String          @id @default(uuid())
@@ -160,6 +175,17 @@ model Like {
    @@map("likes") 
 } 
 
+model PostLike {
+  id      String   @id @default(uuid())
+  userId  String
+  postId  String
+
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId]) // prevents a user from liking the same blog multiple times
+} 
+
 model UserPostLike {
   id      String   @id @default(uuid())
   userId  String
@@ -186,6 +212,24 @@ model UserPostComment {
 
   UserPostCommentLike UserPostCommentLike[]
 }
+
+model PostComment {
+  id         String        @id @default(uuid())
+  comment    String
+  userId     String
+  postId     String
+  parentId   String?       // for nested replies
+  createdAt  DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userpost   Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent     PostComment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    PostComment[]  @relation("CommentReplies")  // 💬 Nested replies
+
+  PostCommentLike PostCommentLike[]
+}
+
+
 
 model Comment {
   id         String        @id @default(uuid())
@@ -227,6 +271,17 @@ model UserPostCommentLike {
   @@unique([commentId, userId]) // prevent duplicate likes
 }
 
+model PostCommentLike {
+  id         String     @id @default(uuid())
+  commentId  String
+  userId     String
+
+  postcomment    PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId]) // prevent duplicate likes
+}
+
 
 
 model SavedBlog {
@@ -242,6 +297,7 @@ model SavedBlog {
 
   @@unique([userId, userPostId])
   @@unique([userId, adminPostId])
+  Post Post[]
 }
 
 
@@ -314,6 +370,12 @@ model User {
   // ❌ Keep ChatRoomParticipant as JSON-only table without relations
 
   ChatRoom ChatRoom[]
+
+  PostLike PostLike[]
+
+  PostComment PostComment[]
+
+  PostCommentLike PostCommentLike[]
 }
 
 
@@ -357,6 +419,8 @@ model Interest {
   SavedTopic SavedTopic[]
 
   UserPost UserPost[]
+
+  Post Post[]
 }
 
 model PostRequest {
