@@ -658,6 +658,7 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
         },
         include: {
           user: true,
+          category:true,
           _count: { select: { userpostlikes: true, userpostcomments: true } },
           savedByUsers: {
             where: {
