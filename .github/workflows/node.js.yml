@@ -2,37 +2,69 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: self-hosted
 
-    steps:
-      - uses: actions/checkout@v4
+    # Expose secrets as env so shell can read them safely
+    env:
+      DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"
+      PORT: "${{ secrets.PORT }}"
+      API_PREFIX: "${{ secrets.API_PREFIX }}"
+      SECRET_KEY: "${{ secrets.SECRET_KEY }}"
+      MAIL_SERVICE: "${{ secrets.MAIL_SERVICE }}"
+      MAIL_HOST: "${{ secrets.MAIL_HOST }}"
+      MAIL_USERNAME: "${{ secrets.MAIL_USERNAME }}"
+      MAIL_PASSWORD: "${{ secrets.MAIL_PASSWORD }}"
+      MAIL_ENCRYPTION: "${{ secrets.MAIL_ENCRYPTION }}"
+      MAIL_PORT: "${{ secrets.MAIL_PORT }}"
+      MAIL_FROM_NAME: "${{ secrets.MAIL_FROM_NAME }}"
 
-      # Write .env from Secrets (includes DATABASE_URL for Prisma)
-      - name: Write .env
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create .env from secrets (with validation)
+        shell: bash
         run: |
-          cat > .env << 'EOF'
-          # Prisma
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          # keep your alias if your app uses it too
-          LIVE_DATABASE_URL=${{ secrets.LIVE_DATABASE_URL }}
-          # App
-          NODE_ENV=production
-          PORT=${{ secrets.PORT }}
-          API_PREFIX=${{ secrets.API_PREFIX }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          # Mail
-          MAIL_SERVICE=${{ secrets.MAIL_SERVICE }}
-          MAIL_HOST=${{ secrets.MAIL_HOST }}
-          MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
-          MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
-          MAIL_ENCRYPTION=${{ secrets.MAIL_ENCRYPTION }}
-          MAIL_PORT=${{ secrets.MAIL_PORT }}
-          MAIL_FROM_NAME=${{ secrets.MAIL_FROM_NAME }}
-          EOF
+          set -euo pipefail
+
+          # Prefer DATABASE_URL; fallback to LIVE_DATABASE_URL
+          DB_URL_VALUE="${DATABASE_URL:-${LIVE_DATABASE_URL:-}}"
+
+          if [ -z "${DB_URL_VALUE}" ]; then
+            echo "ERROR: DATABASE_URL resolved to empty (neither DATABASE_URL nor LIVE_DATABASE_URL provided)."
+            exit 1
+          fi
+
+          # Write .env using printf (avoids heredoc parsing issues)
+          rm -f .env
+          printf '%s\n' "DATABASE_URL=${DB_URL_VALUE}"            >> .env
+          printf '%s\n' "LIVE_DATABASE_URL=${LIVE_DATABASE_URL}"  >> .env
+          printf '%s\n' "NODE_ENV=production"                     >> .env
+          printf '%s\n' "PORT=${PORT}"                            >> .env
+          printf '%s\n' "API_PREFIX=${API_PREFIX}"                >> .env
+          printf '%s\n' "SECRET_KEY=${SECRET_KEY}"                >> .env
+          printf '%s\n' "MAIL_SERVICE=${MAIL_SERVICE}"            >> .env
+          printf '%s\n' "MAIL_HOST=${MAIL_HOST}"                  >> .env
+          printf '%s\n' "MAIL_USERNAME=${MAIL_USERNAME}"          >> .env
+          printf '%s\n' "MAIL_PASSWORD=${MAIL_PASSWORD}"          >> .env
+          printf '%s\n' "MAIL_ENCRYPTION=${MAIL_ENCRYPTION}"      >> .env
+          printf '%s\n' "MAIL_PORT=${MAIL_PORT}"                  >> .env
+          printf '%s\n' "MAIL_FROM_NAME=${MAIL_FROM_NAME}"        >> .env
+
+          # Verify DATABASE_URL exists & non-empty (do not print its value)
+          if ! grep -q '^DATABASE_URL=' .env; then
+            echo "ERROR: DATABASE_URL not written to .env"; exit 1
+          fi
+          LEN="$(awk -F= '/^DATABASE_URL=/{print length($2)}' .env)"
+          if [ "${LEN}" -eq 0 ]; then
+            echo "ERROR: DATABASE_URL in .env is empty"; exit 1
+          fi
 
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
@@ -40,34 +72,37 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
-      # Prisma must see DATABASE_URL in .env
       - name: Prisma generate & migrate
+        shell: bash
         run: |
+          set -euo pipefail
           npx prisma generate
-          # Use migrate deploy if you use migrations, otherwise db push
+          # Deploy migrations if present; otherwise push schema
           npx prisma migrate deploy || npx prisma db push
 
-      # Ensure PM2 exists on the runner
       - name: Ensure PM2 installed
+        shell: bash
         run: |
-          which pm2 || sudo npm i -g pm2
+          command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
 
-      # Start first time or reload if already running; also refresh env
       - name: Start/Reload app with PM2
+        shell: bash
         run: |
-          # Name your app so subsequent restarts work
-          if pm2 describe ollie-backend > /dev/null; then
-            pm2 reload ollie-backend --update-env
+          set -euo pipefail
+          APP_NAME="ollie-backend"
+          if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+            pm2 reload "${APP_NAME}" --update-env
           else
-            pm2 start index.js --name ollie-backend
+            # Change index.js if your entry file is different
+            pm2 start index.js --name "${APP_NAME}"
           fi
           pm2 save
 
-      # Optional: quick health check/logs
-      - name: PM2 status and last logs
+      - name: PM2 status & recent logs
+        shell: bash
         run: |
           pm2 status
           pm2 logs ollie-backend --lines 50
