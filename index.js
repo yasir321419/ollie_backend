@@ -31,6 +31,12 @@ app.use(API_PRIFEX, rootRouter);
 // Global error handling
 app.use(globalErrorMiddleware);
 
+app.get("/health", (req, res) => {
+  console.log("Health check triggered");
+  res.status(200).send("OK");
+});
+
+
 app.get("/", (req, res) => {
   res.send("server is running.....!!!!!!!!!!");
 });
