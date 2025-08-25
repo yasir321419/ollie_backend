@@ -11,8 +11,8 @@ jobs:
 
     # Expose secrets as env so shell can read them safely
     env:
-      DATABASE_URL: "${{ secrets.DATABASE_URL }}"          # may be empty; we fallback below
-      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"# preferred in prod
+      DATABASE_URL: "${{ secrets.DATABASE_URL }}"           # may be empty; we fallback below
+      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}" # preferred in prod
       PORT: "${{ secrets.PORT }}"
       API_PREFIX: "${{ secrets.API_PREFIX }}"
       SECRET_KEY: "${{ secrets.SECRET_KEY }}"
@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # If a blank env var slipped in from job env, force Prisma to read .env
+          # Ensure Prisma reads from .env instead of an empty job env var
           unset DATABASE_URL || true
           npx prisma generate
           # Deploy migrations if present; otherwise push schema
@@ -89,7 +89,7 @@ jobs:
         run: |
           command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
 
-      - name: Start/Reload app with PM2
+      - name: Start/Reload app with PM2 (and show startup logs)
         shell: bash
         run: |
           set -euo pipefail
@@ -107,6 +107,12 @@ jobs:
           pm2 delete index || true
           pm2 save
 
+          echo "=== PM2 process list (post-reload) ==="
+          pm2 status
+
+          echo "=== Startup log snapshot (last 60 lines, non-streaming) ==="
+          pm2 logs "${APP_NAME}" --lines 60 --nostream || true
+
       - name: Health check (fast)
         shell: bash
         run: |
@@ -114,7 +120,8 @@ jobs:
           URL="http://127.0.0.1:${PORT:-3000}/health"
           for i in {1..30}; do
             if curl -fsS "$URL" >/dev/null; then
-              echo "Health check passed"; exit 0
+              echo "Health check passed"
+              exit 0
             fi
             sleep 2
           done
@@ -123,9 +130,7 @@ jobs:
           pm2 logs ollie-backend --lines 120 --nostream || true
           exit 1
 
-      - name: PM2 status & recent logs (non-blocking)
+      - name: Final PM2 status (quick)
         shell: bash
         run: |
           pm2 status
-          # Show last lines without streaming so the step exits quickly
-          timeout 8s pm2 logs ollie-backend --lines 80 --nostream || true
