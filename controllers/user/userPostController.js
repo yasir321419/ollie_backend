@@ -563,13 +563,13 @@ const showAllPostByInterest = async (req, res, next) => {
         where: { categoryId: findtopic.id }
       }),
 
-       prisma.userPost.findMany({
+      prisma.userPost.findMany({
         where: {
           userId: id
         },
         include: {
           user: true,
-          category:true,
+          category: true,
           _count: { select: { userpostlikes: true, userpostcomments: true } },
           savedByUsers: {
             where: {
@@ -610,11 +610,11 @@ const showAllPostByInterest = async (req, res, next) => {
       userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
     });
 
-   
 
-        const allPosts = [...posts, ...userPosts];
 
-         if (allPosts.length === 0) {
+    const allPosts = [...posts, ...userPosts];
+
+    if (allPosts.length === 0) {
       throw new NotFoundError("No posts found");
     }
 
@@ -698,7 +698,7 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
         },
         include: {
           user: true,
-          category:true,
+          category: true,
           _count: { select: { userpostlikes: true, userpostcomments: true } },
           savedByUsers: {
             where: {
