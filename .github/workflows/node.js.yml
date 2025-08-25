@@ -5,9 +5,14 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: self-hosted
+    timeout-minutes: 30
 
     env:
       DATABASE_URL: "${{ secrets.DATABASE_URL }}"
@@ -24,20 +29,27 @@ jobs:
       MAIL_FROM_NAME: "${{ secrets.MAIL_FROM_NAME }}"
 
     steps:
+      # 🚀 Force early log output so the UI shows something immediately
+      - name: Kickoff (print environment info)
+        run: |
+          set -x
+          echo "== CI kickoff at: $(date -u) =="
+          echo "Runner: $(uname -a)"
+          echo "User: $(whoami)"
+          echo "Workspace: ${GITHUB_WORKSPACE}"
+          node -v || true
+          npm -v || true
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Create .env from secrets (no heredoc)
-        shell: bash
         run: |
           set -euo pipefail
-
           DB_URL_VALUE="${DATABASE_URL:-${LIVE_DATABASE_URL:-}}"
           if [ -z "${DB_URL_VALUE}" ]; then
-            echo "ERROR: DATABASE_URL resolved to empty (neither DATABASE_URL nor LIVE_DATABASE_URL provided)."
-            exit 1
+            echo "ERROR: DATABASE_URL resolved to empty."; exit 1
           fi
-
           rm -f .env
           printf '%s\n' "DATABASE_URL=${DB_URL_VALUE}"            >> .env
           printf '%s\n' "LIVE_DATABASE_URL=${LIVE_DATABASE_URL}"  >> .env
@@ -52,15 +64,7 @@ jobs:
           printf '%s\n' "MAIL_ENCRYPTION=${MAIL_ENCRYPTION}"      >> .env
           printf '%s\n' "MAIL_PORT=${MAIL_PORT}"                  >> .env
           printf '%s\n' "MAIL_FROM_NAME=${MAIL_FROM_NAME}"        >> .env
-
-          # Validate DATABASE_URL written & non-empty (don’t echo the value)
-          if ! grep -q '^DATABASE_URL=' .env; then
-            echo "ERROR: DATABASE_URL not written to .env"; exit 1
-          fi
-          LEN="$(awk -F= '/^DATABASE_URL=/{print length($2)}' .env)"
-          if [ "${LEN}" -eq 0 ]; then
-            echo "ERROR: DATABASE_URL in .env is empty"; exit 1
-          fi
+          echo "Wrote .env ($(wc -l < .env) lines)."
 
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
@@ -68,63 +72,67 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      - name: Build & Prisma migrate
-        shell: bash
+      # 🧰 Unified, VERBOSE build logs (so you can see everything)
+      - name: Build & Prisma migrate (verbose)
         run: |
-          set -euo pipefail
-          echo "=== Installing dependencies ==="
-          npm ci
-          echo "=== Running build (if defined) ==="
+          set -euxo pipefail
+          echo "=== Installing dependencies (verbose) ==="
+          npm ci --loglevel=verbose --foreground-scripts
+          echo "=== Running build (if present) ==="
           npm run build --if-present
           echo "=== Generating Prisma client ==="
-          unset DATABASE_URL || true     # ensure Prisma reads .env, not a blank env var
+          # ensure Prisma reads .env, not an empty inherited var
+          unset DATABASE_URL || true
           npx prisma generate
           echo "=== Running Prisma migrations ==="
           npx prisma migrate deploy || npx prisma db push
+          echo "=== Build + Prisma completed at $(date -u) ==="
 
       - name: Ensure PM2 installed
-        shell: bash
         run: |
-          command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
+          set -x
+          if ! command -v pm2 >/dev/null 2>&1; then
+            # Avoid hanging on sudo password prompt: ensure your runner user has passwordless sudo for npm
+            sudo npm i -g pm2
+          fi
+          pm2 -v
 
       - name: Start/Reload app with PM2
-        shell: bash
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           APP_NAME="ollie-backend"
-
           if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
             pm2 reload "${APP_NAME}" --update-env
           else
             pm2 start index.js --name "${APP_NAME}"
           fi
-
           pm2 delete index || true
           pm2 save
 
-      - name: Show startup logs (from files, reliable)
-        shell: bash
+      # 📄 Don’t rely on pm2 streaming — tail the real log files
+      - name: Show startup logs (snapshot)
         run: |
-          echo "=== PM2 process list ==="
-          pm2 status
-          echo "=== App OUT log (last 120 lines) ==="
+          set -x
+          echo "=== PM2 status ==="
+          pm2 status || true
+          echo "=== OUT log (last 120 lines) ==="
           tail -n 120 ~/.pm2/logs/ollie-backend-out.log || true
-          echo "=== App ERROR log (last 120 lines) ==="
+          echo "=== ERROR log (last 120 lines) ==="
           tail -n 120 ~/.pm2/logs/ollie-backend-error.log || true
 
-      - name: Health check (fast)
-        shell: bash
+      - name: Health check
         run: |
           set -e
           URL="http://127.0.0.1:${PORT:-3000}/health"
           for i in {1..30}; do
             if curl -fsS "$URL" >/dev/null; then
-              echo "Health check passed"
+              echo "Health check passed at $(date -u)"
               exit 0
             fi
+            echo "Waiting for app... ($i/30)"
             sleep 2
           done
-          echo "Health check failed"
+          echo "Health check FAILED"
           tail -n 200 ~/.pm2/logs/ollie-backend-out.log || true
           tail -n 200 ~/.pm2/logs/ollie-backend-error.log || true
           exit 1
