@@ -9,10 +9,9 @@ jobs:
   build:
     runs-on: self-hosted
 
-    # Expose secrets as env so shell can read them safely
     env:
-      DATABASE_URL: "${{ secrets.DATABASE_URL }}"           # may be empty; we fallback below
-      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}" # preferred in prod
+      DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"
       PORT: "${{ secrets.PORT }}"
       API_PREFIX: "${{ secrets.API_PREFIX }}"
       SECRET_KEY: "${{ secrets.SECRET_KEY }}"
@@ -28,19 +27,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create .env from secrets (with validation)
+      - name: Create .env from secrets (no heredoc)
         shell: bash
         run: |
           set -euo pipefail
 
-          # Prefer DATABASE_URL; fallback to LIVE_DATABASE_URL; both may be empty
           DB_URL_VALUE="${DATABASE_URL:-${LIVE_DATABASE_URL:-}}"
           if [ -z "${DB_URL_VALUE}" ]; then
             echo "ERROR: DATABASE_URL resolved to empty (neither DATABASE_URL nor LIVE_DATABASE_URL provided)."
             exit 1
           fi
 
-          # Write .env using printf (avoids heredoc quirks)
           rm -f .env
           printf '%s\n' "DATABASE_URL=${DB_URL_VALUE}"            >> .env
           printf '%s\n' "LIVE_DATABASE_URL=${LIVE_DATABASE_URL}"  >> .env
@@ -56,7 +53,7 @@ jobs:
           printf '%s\n' "MAIL_PORT=${MAIL_PORT}"                  >> .env
           printf '%s\n' "MAIL_FROM_NAME=${MAIL_FROM_NAME}"        >> .env
 
-          # Verify DATABASE_URL exists & non-empty (don't print its value)
+          # Validate DATABASE_URL written & non-empty (don’t echo the value)
           if ! grep -q '^DATABASE_URL=' .env; then
             echo "ERROR: DATABASE_URL not written to .env"; exit 1
           fi
@@ -71,17 +68,18 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prisma generate & migrate
+      - name: Build & Prisma migrate
         shell: bash
         run: |
           set -euo pipefail
-          # Ensure Prisma reads from .env instead of an empty job env var
-          unset DATABASE_URL || true
+          echo "=== Installing dependencies ==="
+          npm ci
+          echo "=== Running build (if defined) ==="
+          npm run build --if-present
+          echo "=== Generating Prisma client ==="
+          unset DATABASE_URL || true     # ensure Prisma reads .env, not a blank env var
           npx prisma generate
-          # Deploy migrations if present; otherwise push schema
+          echo "=== Running Prisma migrations ==="
           npx prisma migrate deploy || npx prisma db push
 
       - name: Ensure PM2 installed
@@ -89,29 +87,30 @@ jobs:
         run: |
           command -v pm2 >/dev/null 2>&1 || sudo npm i -g pm2
 
-      - name: Start/Reload app with PM2 (and show startup logs)
+      - name: Start/Reload app with PM2
         shell: bash
         run: |
           set -euo pipefail
           APP_NAME="ollie-backend"
 
-          # Start first time or reload; --update-env picks up new .env
           if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
             pm2 reload "${APP_NAME}" --update-env
           else
-            # Change index.js if your entry file is different
             pm2 start index.js --name "${APP_NAME}"
           fi
 
-          # Remove any old crashed 'index' process lingering in PM2
           pm2 delete index || true
           pm2 save
 
-          echo "=== PM2 process list (post-reload) ==="
+      - name: Show startup logs (from files, reliable)
+        shell: bash
+        run: |
+          echo "=== PM2 process list ==="
           pm2 status
-
-          echo "=== Startup log snapshot (last 60 lines, non-streaming) ==="
-          pm2 logs "${APP_NAME}" --lines 60 --nostream || true
+          echo "=== App OUT log (last 120 lines) ==="
+          tail -n 120 ~/.pm2/logs/ollie-backend-out.log || true
+          echo "=== App ERROR log (last 120 lines) ==="
+          tail -n 120 ~/.pm2/logs/ollie-backend-error.log || true
 
       - name: Health check (fast)
         shell: bash
@@ -126,11 +125,6 @@ jobs:
             sleep 2
           done
           echo "Health check failed"
-          # print a small snippet of logs for debugging and fail
-          pm2 logs ollie-backend --lines 120 --nostream || true
+          tail -n 200 ~/.pm2/logs/ollie-backend-out.log || true
+          tail -n 200 ~/.pm2/logs/ollie-backend-error.log || true
           exit 1
-
-      - name: Final PM2 status (quick)
-        shell: bash
-        run: |
-          pm2 status
