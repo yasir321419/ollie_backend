@@ -28,6 +28,11 @@ jobs:
       MAIL_ENCRYPTION: "${{ secrets.MAIL_ENCRYPTION }}"
       MAIL_PORT: "${{ secrets.MAIL_PORT }}"
       MAIL_FROM_NAME: "${{ secrets.MAIL_FROM_NAME }}"
+      ACCESS_KEY_ID: "${{ secrets.ACCESS_KEY_ID }}"
+      SECRET_ACCESS_KEY: "${{ secrets.SECRET_ACCESS_KEY }}"
+      BUCKET_REGION: "${{ secrets.BUCKET_REGION }}"
+      BUCKET_NAME: "${{ secrets.BUCKET_NAME }}"
+      S3_ACCESS_URL: "${{ secrets.S3_ACCESS_URL }}"
 
     steps:
       # Print the environment info to quickly debug issues
@@ -70,6 +75,11 @@ jobs:
           printf '%s\n' "MAIL_ENCRYPTION=${MAIL_ENCRYPTION}"      >> .env
           printf '%s\n' "MAIL_PORT=${MAIL_PORT}"                  >> .env
           printf '%s\n' "MAIL_FROM_NAME=${MAIL_FROM_NAME}"        >> .env
+          printf '%s\n' "ACCESS_KEY_ID=${ACCESS_KEY_ID}"          >> .env
+          printf '%s\n' "SECRET_ACCESS_KEY=${SECRET_ACCESS_KEY}"        >> .env
+          printf '%s\n' "BUCKET_REGION=${BUCKET_REGION}"        >> .env
+          printf '%s\n' "BUCKET_NAME=${BUCKET_NAME}"        >> .env
+          printf '%s\n' "S3_ACCESS_URL=${S3_ACCESS_URL}"        >> .env
           echo "Wrote .env with $(wc -l < .env) lines."
 
           # Validate the environment variables

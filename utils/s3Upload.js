@@ -16,6 +16,7 @@ const uploadFileWithFolder = async (buffer, filename, contentType, folder) => {
       Key: `${folder}/${filename}`,
       ContentType: contentType,
       Body: buffer,
+      ACL: 'public-read'
     });
 
     await s3.send(command);

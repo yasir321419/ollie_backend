@@ -1,6 +1,8 @@
 const prisma = require("../../config/prismaConfig");
 const { BadRequestError, ValidationError, NotFoundError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
+const uploadFileWithFolder = require("../../utils/s3Upload");
+const fs = require('fs');
 
 const createBlog = async (req, res, next) => {
   try {
@@ -18,16 +20,26 @@ const createBlog = async (req, res, next) => {
     if (!findcategory) {
       throw new NotFoundError("blog category not found")
     }
-    const filePath = file.filename; // use filename instead of path
-    const basePath = `http://${req.get("host")}/public/uploads/`;
-    const blogImage = `${basePath}${filePath}`;
+    // const filePath = file.filename; // use filename instead of path
+    // const basePath = `http://${req.get("host")}/public/uploads/`;
+    // const blogImage = `${basePath}${filePath}`;
+
+
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
     const createblog = await prisma.blog.create({
       data: {
         title: postTitle,
         content: postContent,
         adminId: id,
-        image: blogImage,
+        image: s3ImageUrl,
         categoryId: findcategory.id
       },
       include: {
@@ -69,6 +81,15 @@ const updateBlog = async (req, res, next) => {
     const { postId } = req.params;
     const updatedObj = {};
 
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
     const findblog = await prisma.blog.findFirst({
       where: {
         id: postId,
@@ -88,11 +109,13 @@ const updateBlog = async (req, res, next) => {
       updatedObj.content = postContent
     }
 
+
+
     if (file) {
-      const filePath = file.filename; // use filename instead of path
-      const basePath = `http://${req.get("host")}/public/uploads/`;
-      const image = `${basePath}${filePath}`;
-      updatedObj.image = image;
+      // const filePath = file.filename; // use filename instead of path
+      // const basePath = `http://${req.get("host")}/public/uploads/`;
+      // const image = `${basePath}${filePath}`;
+      updatedObj.image = s3ImageUrl;
     }
 
     const updateBlog = await prisma.blog.update({

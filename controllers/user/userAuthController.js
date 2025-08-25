@@ -8,6 +8,9 @@ const generateOtpExpiry = require("../../utils/verifyOtp");
 const emailTemplates = require("../../utils/emailTemplate");
 const { genToken } = require("../../utils/generateToken");
 const { hashPassword, comparePassword } = require("../../utils/passwordHashed");
+const uploadFileWithFolder = require("../../utils/s3Upload");
+const fs = require('fs');
+
 
 const userRegister = async (req, res, next) => {
     try {
@@ -615,6 +618,15 @@ const userEditProfile = async (req, res, next) => {
 
         const updateObj = {}
 
+        const filePath = file.path; // Full file path of the uploaded file
+        const folder = 'uploads'; // Or any folder you want to store the image in
+        const filename = file.filename; // The filename of the uploaded file
+        const contentType = file.mimetype; // The MIME type of the file
+
+        const fileBuffer = fs.readFileSync(filePath);
+
+        const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
         if (userFirstName) {
             updateObj.firstName = userFirstName
         }
@@ -646,10 +658,10 @@ const userEditProfile = async (req, res, next) => {
         }
 
         if (file) {
-            const filePath = file.filename; // use filename instead of path
-            const basePath = `http://${req.get("host")}/public/uploads/`;
-            const image = `${basePath}${filePath}`;
-            updateObj.image = image;
+            // const filePath = file.filename; // use filename instead of path
+            // const basePath = `http://${req.get("host")}/public/uploads/`;
+            // const image = `${basePath}${filePath}`;
+            updateObj.image = s3ImageUrl;
         }
 
         const updateuser = await prisma.user.update({

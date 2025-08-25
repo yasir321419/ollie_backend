@@ -4,6 +4,8 @@ const { handlerOk } = require("../../resHandler/responseHandler");
 const checkAndDeductUserCredit = require("../../utils/checkConnects");
 const checkUserSubscription = require("../../utils/checkSubscription");
 const sendNotification = require("../../utils/notification");
+const uploadFileWithFolder = require("../../utils/s3Upload");
+const fs = require('fs');
 
 const createUserPost = async (req, res, next) => {
   try {
@@ -27,9 +29,19 @@ const createUserPost = async (req, res, next) => {
       throw new BadRequestError("please provide blog image");
     }
 
-    const filePath = file.filename; // use filename instead of path
-    const basePath = `http://${req.get("host")}/public/uploads/`;
-    const postImage = `${basePath}${filePath}`;
+
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
+    // const filePath = file.filename; // use filename instead of path
+    // const basePath = `http://${req.get("host")}/public/uploads/`;
+    const postImage = s3ImageUrl;
 
 
     const createPost = await prisma.userPost.create({
@@ -145,6 +157,15 @@ const updateUserPost = async (req, res, next) => {
     const { postTitle, postContent } = req.body;
     const file = req.file;
 
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
     const updatedObj = {};
 
     if (postTitle) {
@@ -157,10 +178,10 @@ const updateUserPost = async (req, res, next) => {
 
     if (file) {
 
-      const filePath = file.filename; // use filename instead of path
-      const basePath = `http://${req.get("host")}/public/uploads/`;
-      const postImage = `${basePath}${filePath}`;
-      updatedObj.image = postImage;
+      // const filePath = file.filename; // use filename instead of path
+      // const basePath = `http://${req.get("host")}/public/uploads/`;
+      // const postImage = `${basePath}${filePath}`;
+      updatedObj.image = s3ImageUrl;
     }
 
 

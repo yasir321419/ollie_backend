@@ -1,6 +1,8 @@
 const prisma = require("../../config/prismaConfig");
 const { ConflictError, NotFoundError, ValidationError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
+const uploadFileWithFolder = require("../../utils/s3Upload");
+const fs = require('fs');
 
 
 
@@ -257,6 +259,15 @@ const uploadAttachment = async (req, res, next) => {
     const { attachmentType } = req.body;
     const file = req.file;
 
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
     const findChatRoom = await prisma.chatRoom.findFirst({
       where: {
         id: chatRoomId
@@ -276,9 +287,9 @@ const uploadAttachment = async (req, res, next) => {
 
     let attachmentUrl = '';
     if (file) {
-      const filePath = file.filename;
-      const basePath = `http://${req.get("host")}/public/uploads/`;
-      attachmentUrl = `${basePath}${filePath}`;
+      // const filePath = file.filename;
+      // const basePath = `http://${req.get("host")}/public/uploads/`;
+      attachmentUrl = s3ImageUrl;
     }
 
     const newMessage = await prisma.message.create({

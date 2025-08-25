@@ -4,7 +4,8 @@ const { ConflictError, NotFoundError, BadRequestError, ValidationError } = requi
 const { handlerOk } = require("../../resHandler/responseHandler");
 const { genToken } = require("../../utils/generateToken");
 const { hashPassword, comparePassword } = require("../../utils/passwordHashed");
-
+const fs = require('fs');
+const uploadFileWithFolder = require("../../utils/s3Upload");
 
 
 
@@ -64,16 +65,26 @@ const editImage = async (req, res, next) => {
     const file = req.file;
     const { id } = req.user;
 
-    const filePath = file.filename; // use filename instead of path
-    const basePath = `http://${req.get("host")}/public/uploads/`;
-    const image = `${basePath}${filePath}`;
+    // const filePath = file.filename; // use filename instead of path
+    // const basePath = `http://${req.get("host")}/public/uploads/`;
+    // const image = `${basePath}${filePath}`;
+
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
 
     const updateadmin = await prisma.admin.update({
       where: {
         id
       },
       data: {
-        image
+        image: s3ImageUrl
       }
     });
 

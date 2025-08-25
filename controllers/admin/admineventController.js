@@ -1,6 +1,8 @@
 const prisma = require("../../config/prismaConfig");
 const { ValidationError, NotFoundError } = require("../../resHandler/CustomError");
 const { handlerOk } = require("../../resHandler/responseHandler");
+const uploadFileWithFolder = require("../../utils/s3Upload");
+const fs = require('fs');
 
 const createEvent = async (req, res, next) => {
   try {
@@ -9,9 +11,19 @@ const createEvent = async (req, res, next) => {
     const file = req.file;
 
 
-    const filePath = file.filename; // use filename instead of path
-    const basePath = `http://${req.get("host")}/public/uploads/`;
-    const eventImage = `${basePath}${filePath}`;
+    // const filePath = file.filename; // use filename instead of path
+    // const basePath = `http://${req.get("host")}/public/uploads/`;
+    // const eventImage = `${basePath}${filePath}`;
+
+
+    const filePath = file.path; // Full file path of the uploaded file
+    const folder = 'uploads'; // Or any folder you want to store the image in
+    const filename = file.filename; // The filename of the uploaded file
+    const contentType = file.mimetype; // The MIME type of the file
+
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
     const event = await prisma.event.create({
       data: {
@@ -22,7 +34,7 @@ const createEvent = async (req, res, next) => {
         eventStates,
         eventCity,
         eventCountry,
-        image: eventImage,
+        image: s3ImageUrl,
         createdById: id
       }
     });
