@@ -562,11 +562,41 @@ const showAllPostByInterest = async (req, res, next) => {
       prisma.post.count({
         where: { categoryId: findtopic.id }
       }),
+
+       prisma.userPost.findMany({
+        where: {
+          userId: id
+        },
+        include: {
+          user: true,
+          category:true,
+          _count: { select: { userpostlikes: true, userpostcomments: true } },
+          savedByUsers: {
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          },
+          userpostlikes: { // Correct relation to userpostlikes
+            where: {
+              userId: id
+            },
+            select: {
+              id: true
+            }
+          }
+        },
+        skip,
+        take: limit,
+      })
     ]);
 
     // Destructure the results
     const posts = findpostbytopics[0];
     const totalCount = findpostbytopics[1];
+    const userPosts = findpostbytopics[2];
 
     // Add `isSavePost` and `isLikePost` flag to each post from the topic
     posts.forEach(post => {
@@ -574,7 +604,17 @@ const showAllPostByInterest = async (req, res, next) => {
       post.isLikePost = post.PostLike.length > 0;
     });
 
-    if (posts.length === 0) {
+    // Add `isSavePost` and `isLikePost` flag to each user post
+    userPosts.forEach(userpost => {
+      userpost.isSavePost = userpost.savedByUsers.length > 0;
+      userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
+    });
+
+   
+
+        const allPosts = [...posts, ...userPosts];
+
+         if (allPosts.length === 0) {
       throw new NotFoundError("No posts found");
     }
 
@@ -582,7 +622,7 @@ const showAllPostByInterest = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Posts found successfully",
-      data: posts,
+      data: allPosts,
       totalCount
     });
 
