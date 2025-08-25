@@ -11,8 +11,8 @@ jobs:
 
     # Expose secrets as env so shell can read them safely
     env:
-      DATABASE_URL: "${{ secrets.DATABASE_URL }}"
-      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"
+      DATABASE_URL: "${{ secrets.DATABASE_URL }}"          # may be empty; we fallback below
+      LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"# preferred in prod
       PORT: "${{ secrets.PORT }}"
       API_PREFIX: "${{ secrets.API_PREFIX }}"
       SECRET_KEY: "${{ secrets.SECRET_KEY }}"
@@ -33,15 +33,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Prefer DATABASE_URL; fallback to LIVE_DATABASE_URL
+          # Prefer DATABASE_URL; fallback to LIVE_DATABASE_URL; both may be empty
           DB_URL_VALUE="${DATABASE_URL:-${LIVE_DATABASE_URL:-}}"
-
           if [ -z "${DB_URL_VALUE}" ]; then
             echo "ERROR: DATABASE_URL resolved to empty (neither DATABASE_URL nor LIVE_DATABASE_URL provided)."
             exit 1
           fi
 
-          # Write .env using printf (avoids heredoc parsing issues)
+          # Write .env using printf (avoids heredoc quirks)
           rm -f .env
           printf '%s\n' "DATABASE_URL=${DB_URL_VALUE}"            >> .env
           printf '%s\n' "LIVE_DATABASE_URL=${LIVE_DATABASE_URL}"  >> .env
@@ -57,7 +56,7 @@ jobs:
           printf '%s\n' "MAIL_PORT=${MAIL_PORT}"                  >> .env
           printf '%s\n' "MAIL_FROM_NAME=${MAIL_FROM_NAME}"        >> .env
 
-          # Verify DATABASE_URL exists & non-empty (do not print its value)
+          # Verify DATABASE_URL exists & non-empty (don't print its value)
           if ! grep -q '^DATABASE_URL=' .env; then
             echo "ERROR: DATABASE_URL not written to .env"; exit 1
           fi
@@ -79,6 +78,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # If a blank env var slipped in from job env, force Prisma to read .env
+          unset DATABASE_URL || true
           npx prisma generate
           # Deploy migrations if present; otherwise push schema
           npx prisma migrate deploy || npx prisma db push
@@ -93,16 +94,38 @@ jobs:
         run: |
           set -euo pipefail
           APP_NAME="ollie-backend"
+
+          # Start first time or reload; --update-env picks up new .env
           if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
             pm2 reload "${APP_NAME}" --update-env
           else
             # Change index.js if your entry file is different
             pm2 start index.js --name "${APP_NAME}"
           fi
+
+          # Remove any old crashed 'index' process lingering in PM2
+          pm2 delete index || true
           pm2 save
 
-      - name: PM2 status & recent logs
+      - name: Health check (fast)
+        shell: bash
+        run: |
+          set -e
+          URL="http://127.0.0.1:${PORT:-3000}/health"
+          for i in {1..30}; do
+            if curl -fsS "$URL" >/dev/null; then
+              echo "Health check passed"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check failed"
+          # print a small snippet of logs for debugging and fail
+          pm2 logs ollie-backend --lines 120 --nostream || true
+          exit 1
+
+      - name: PM2 status & recent logs (non-blocking)
         shell: bash
         run: |
           pm2 status
-          pm2 logs ollie-backend --lines 50
+          # Show last lines without streaming so the step exits quickly
+          timeout 8s pm2 logs ollie-backend --lines 80 --nostream || true
