@@ -532,6 +532,127 @@ const showUserPostCommentLikeReply = async (req, res, next) => {
 }
 
 
+// const showAllPostByInterest = async (req, res, next) => {
+//   try {
+//     const { id } = req.user;
+//     const { topicsId } = req.params;
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     // Find the selected topic
+//     const findtopic = await prisma.interest.findUnique({
+//       where: {
+//         id: topicsId
+//       }
+//     });
+
+//     if (!findtopic) {
+//       throw new NotFoundError("Topic not found");
+//     }
+
+//     // Fetch posts related to the selected topic
+//     const findpostbytopics = await Promise.all([
+//       prisma.post.findMany({
+//         where: { categoryId: findtopic.id },
+//         include: {
+//           category: true,
+//           admin: true,
+//           _count: { select: { PostLike: true, postcomments: true } },
+//           savedByUsers: {
+//             where: {
+//               userId: id
+//             },
+//             select: {
+//               id: true
+//             }
+//           },
+//           PostLike: {
+//             where: {
+//               userId: id
+//             },
+//             select: {
+//               id: true
+//             }
+//           }
+//         },
+//         skip,
+//         take: limit,
+//         orderBy: { createdAt: 'desc' },
+//       }),
+//       prisma.post.count({
+//         where: { categoryId: findtopic.id }
+//       }),
+
+//       prisma.userPost.findMany({
+//         where: {
+//           userId: id
+//         },
+//         include: {
+//           user: true,
+//           category: true,
+//           _count: { select: { userpostlikes: true, userpostcomments: true } },
+//           savedByUsers: {
+//             where: {
+//               userId: id
+//             },
+//             select: {
+//               id: true
+//             }
+//           },
+//           userpostlikes: { // Correct relation to userpostlikes
+//             where: {
+//               userId: id
+//             },
+//             select: {
+//               id: true
+//             }
+//           }
+//         },
+//         skip,
+//         take: limit,
+//       })
+//     ]);
+
+//     // Destructure the results
+//     const posts = findpostbytopics[0];
+//     const totalCount = findpostbytopics[1];
+//     const userPosts = findpostbytopics[2];
+
+//     // Add `isSavePost` and `isLikePost` flag to each post from the topic
+//     posts.forEach(post => {
+//       post.isSavePost = post.savedByUsers.length > 0;
+//       post.isLikePost = post.PostLike.length > 0;
+//     });
+
+//     // Add `isSavePost` and `isLikePost` flag to each user post
+//     userPosts.forEach(userpost => {
+//       userpost.isSavePost = userpost.savedByUsers.length > 0;
+//       userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
+//     });
+
+
+
+//     const allPosts = [...posts, ...userPosts];
+
+//     if (allPosts.length === 0) {
+//       throw new NotFoundError("No posts found");
+//     }
+
+//     // Return the posts with total count
+//     return res.status(200).json({
+//       success: true,
+//       message: "Posts found successfully",
+//       data: allPosts,
+//       totalCount
+//     });
+
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+
 const showAllPostByInterest = async (req, res, next) => {
   try {
     const { id } = req.user;
@@ -540,117 +661,119 @@ const showAllPostByInterest = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    console.log(id, 'id');
+
+    // Log for debugging
+    console.log('topicsId:', topicsId);
+    console.log('page:', page, 'limit:', limit);
+
     // Find the selected topic
     const findtopic = await prisma.interest.findUnique({
-      where: {
-        id: topicsId
-      }
+      where: { id: topicsId }
     });
 
     if (!findtopic) {
       throw new NotFoundError("Topic not found");
     }
 
+    // Log the found topic
+    console.log('Found Topic:', findtopic);
+
     // Fetch posts related to the selected topic
-    const findpostbytopics = await Promise.all([
-      prisma.post.findMany({
-        where: { categoryId: findtopic.id },
-        include: {
-          category: true,
-          admin: true,
-          _count: { select: { PostLike: true, postcomments: true } },
-          savedByUsers: {
-            where: {
-              userId: id
-            },
-            select: {
-              id: true
-            }
-          },
-          PostLike: {
-            where: {
-              userId: id
-            },
-            select: {
-              id: true
-            }
-          }
-        },
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      prisma.post.count({
-        where: { categoryId: findtopic.id }
-      }),
+    // const posts = await prisma.post.findMany({
+    //   where: { categoryId: findtopic.id },
+    //   include: {
+    //     category: true,
+    //     admin: true,
+    //     _count: { select: { PostLike: true, postcomments: true } },
+    //     savedByUsers: { where: { userId: id }, select: { id: true } },
+    //     PostLike: { where: { userId: id }, select: { id: true } }
+    //   },
+    //   skip,
+    //   take: limit,
+    //   orderBy: { createdAt: 'desc' },
+    // });
 
-      prisma.userPost.findMany({
-        where: {
-          userId: id
-        },
-        include: {
-          user: true,
-          category: true,
-          _count: { select: { userpostlikes: true, userpostcomments: true } },
-          savedByUsers: {
-            where: {
-              userId: id
-            },
-            select: {
-              id: true
-            }
-          },
-          userpostlikes: { // Correct relation to userpostlikes
-            where: {
-              userId: id
-            },
-            select: {
-              id: true
-            }
-          }
-        },
-        skip,
-        take: limit,
-      })
-    ]);
+    const posts = await prisma.post.findMany({
+      where: { categoryId: findtopic.id },
+      include: {
+        category: true,
+        admin: true,
+        _count: { select: { PostLike: true, postcomments: true } },
+        savedByUsers: { where: { userId: id }, select: { id: true } },
+        PostLike: { where: { userId: id }, select: { id: true } }
+      },
+      skip: skip,   // Check this value to ensure it's correct
+      take: limit,  // This defines the maximum number of posts to fetch
+      orderBy: { createdAt: 'desc' },
+    });
 
-    // Destructure the results
-    const posts = findpostbytopics[0];
-    const totalCount = findpostbytopics[1];
-    const userPosts = findpostbytopics[2];
 
-    // Add `isSavePost` and `isLikePost` flag to each post from the topic
+    // Count the total number of posts related to the selected topic
+    const totalPostCount = await prisma.post.count({
+      where: { categoryId: findtopic.id }
+    });
+
+    const totalUserPostCount = await prisma.userPost.count({
+      where: { categoryId: findtopic.id }
+    });
+
+    // Fetch user posts with categoryId filter
+
+    const userPosts = await prisma.userPost.findMany({
+      where: { categoryId: findtopic.id }, // Filter by userId and categoryId
+      include: {
+        user: true,
+        category: true,
+        _count: { select: { userpostlikes: true, userpostcomments: true } },
+        savedByUsers: { where: { userId: id }, select: { id: true } },
+        userpostlikes: { where: { userId: id }, select: { id: true } }
+      },
+      skip: skip,
+      take: limit,
+    });
+
+
+    // Log for debugging
+    console.log('posts:', posts);
+    console.log('userPosts:', userPosts);
+
+    // Add `isSavePost`, `isLikePost`, and `source` flags to posts
     posts.forEach(post => {
       post.isSavePost = post.savedByUsers.length > 0;
       post.isLikePost = post.PostLike.length > 0;
+      post.source = 'admin'; // Identifying admin posts
     });
 
-    // Add `isSavePost` and `isLikePost` flag to each user post
     userPosts.forEach(userpost => {
       userpost.isSavePost = userpost.savedByUsers.length > 0;
-      userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
+      userpost.isLikePost = userpost.userpostlikes.length > 0;
+      userpost.source = 'user'; // Identifying user posts
     });
 
-
-
+    // Combine both posts
     const allPosts = [...posts, ...userPosts];
 
     if (allPosts.length === 0) {
       throw new NotFoundError("No posts found");
     }
 
-    // Return the posts with total count
+    // Return paginated response with total count
     return res.status(200).json({
       success: true,
       message: "Posts found successfully",
       data: allPosts,
-      totalCount
+      totalPostCount,
+      totalUserPostCount
     });
 
   } catch (error) {
     next(error);
   }
 };
+
+
+
 
 
 
@@ -715,7 +838,7 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
       // Fetch user’s posts
       prisma.userPost.findMany({
         where: {
-          userId: id
+          categoryId: { in: interestIds }
         },
         include: {
           user: true,

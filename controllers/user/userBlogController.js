@@ -177,43 +177,26 @@ const saveBlog = async (req, res, next) => {
     const { blogId } = req.params;
     const { id, deviceToken, firstName } = req.user;
 
-    const adminpost = await prisma.blog.findUnique({
-      where: {
-        id: blogId
-      }
-    });
+    // Fetch posts
+    const adminPost = await prisma.blog.findUnique({ where: { id: blogId } });
+    const userPost = !adminPost ? await prisma.userPost.findUnique({ where: { id: blogId } }) : null;
+    const post = !adminPost && !userPost ? await prisma.post.findUnique({ where: { id: blogId } }) : null;
 
-    let userpost = null;
-
-    if (!adminpost) {
-      userpost = await prisma.userPost.findUnique({
-        where: {
-          id: blogId
-        }
-      });
-      if (!userpost) {
-        throw new NotFoundError("user post not found");
-      }
+    if (!adminPost && !userPost && !post) {
+      throw new NotFoundError("Post not found");
     }
 
     let alreadySaved = null;
     let blogTitle = '';
 
-    if (adminpost) {
+    if (adminPost) {
+      blogTitle = adminPost.title;
+
       alreadySaved = await prisma.savedBlog.findUnique({
-        where: {
-          userId_adminPostId: {
-            userId: id,
-            adminPostId: blogId
-          }
-        }
+        where: { userId_adminPostId: { userId: id, adminPostId: blogId } }
       });
 
-      if (alreadySaved) {
-        throw new ConflictError("Blog already saved");
-      }
-
-      blogTitle = adminpost.title;
+      if (alreadySaved) throw new ConflictError("Blog already saved");
 
       await prisma.savedBlog.create({
         data: {
@@ -221,23 +204,16 @@ const saveBlog = async (req, res, next) => {
           adminPostId: blogId,
           postType: "ADMIN"
         }
-      })
-    } else if (userpost) {
+      });
+    }
+    else if (userPost) {
+      blogTitle = userPost.title;
+
       alreadySaved = await prisma.savedBlog.findUnique({
-        where: {
-          userId_userPostId: {
-            userId: id,
-            userPostId: blogId,
-          }
-        }
+        where: { userId_userPostId: { userId: id, userPostId: blogId } }
       });
 
-      if (alreadySaved) {
-        throw new ConflictError("Blog already saved");
-      }
-
-      blogTitle = userpost.title;
-
+      if (alreadySaved) throw new ConflictError("Blog already saved");
 
       await prisma.savedBlog.create({
         data: {
@@ -245,22 +221,40 @@ const saveBlog = async (req, res, next) => {
           userPostId: blogId,
           postType: "USER"
         }
-      })
+      });
+    }
+    else if (post) {
+      blogTitle = post.title;
+
+      // For generic PostId, you might want to add a unique constraint if needed
+      alreadySaved = await prisma.savedBlog.findFirst({
+        where: { userId: id, PostId: blogId }
+      });
+
+      if (alreadySaved) throw new ConflictError("Blog already saved");
+
+      await prisma.savedBlog.create({
+        data: {
+          userId: id,
+          PostId: blogId,
+          postType: "USER" // or another type like "POST" if you prefer
+        }
+      });
     }
 
-    // Send notification with blog title included
+    // Optional: Send notification
+    // await sendNotification(id, deviceToken, `Hi ${firstName}, you saved "${blogTitle}"!`);
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you saved the blog titled "${blogTitle}" in your save history!`
-    // );
-
-    handlerOk(res, 200, null, 'blog saved successfully')
+    handlerOk(res, 200, null, 'Blog saved successfully');
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+
+
+
+
 
 const showSaveBlog = async (req, res, next) => {
   try {

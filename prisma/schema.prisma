@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("LIVE_DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum otpReason {
@@ -288,16 +288,16 @@ model SavedBlog {
   id           String        @id @default(uuid())
   userId       String
   userPostId   String?       // Nullable for user-created posts
-  adminPostId  String?       // Nullable for admin-created posts
+  adminPostId  String?
+  PostId  String?        // Nullable for admin-created posts
   postType     PostType
 
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userPost     UserPost?  @relation(fields: [userPostId], references: [id], onDelete: Cascade)
   adminPost    Blog?      @relation(fields: [adminPostId], references: [id], onDelete: Cascade)
-
+  post        Post?      @relation(fields: [PostId], references: [id], onDelete: Cascade)
   @@unique([userId, userPostId])
   @@unique([userId, adminPostId])
-  Post Post[]
 }
 
 
