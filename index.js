@@ -17,6 +17,7 @@ const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
 require("dotenv").config();
 
+console.log(API_PRIFEX, 'API_PRIFEX');
 
 
 app.use(cors({ origin: '*' }));
