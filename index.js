@@ -36,6 +36,10 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
+app.get("/api/v1/user", (req, res) => {
+  res.send("welcome to user");
+});
+
 
 app.get("/", (req, res) => {
   res.send("server is running.....!!!!!");
