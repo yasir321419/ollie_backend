@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
-const API_PRIFEX = '/api/v1/';  // Prefix for all routes
+const API_PRIFEX = process.env.API_PRIFEX;  // Prefix for all routes
 const rootRouter = require("./routes/index");
 const globalErrorMiddleware = require("./middleware/globalMiddleware");
 const dbConnect = require('./db/connectivity');
@@ -37,7 +37,7 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
-app.get(`${API_PRIFEX}/user`, (req, res) => {
+app.get(`${API_PRIFEX}user`, (req, res) => {
   res.send("welcome to user");
 });
 
