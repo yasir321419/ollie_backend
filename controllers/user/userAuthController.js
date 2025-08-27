@@ -605,48 +605,48 @@ const userEditProfile = async (req, res, next) => {
 
         console.log(file, 'file');
 
-
-        const currentPrifile = await prisma.user.findUnique({
-            where: {
-                id: id
-            }
+        const currentProfile = await prisma.user.findUnique({
+            where: { id: id }
         });
 
-        if (!currentPrifile) {
-            throw new NotFoundError("user not found")
+        if (!currentProfile) {
+            throw new NotFoundError("User not found");
         }
 
-        const updateObj = {}
+        const updateObj = {};
 
-        // const filePath = file.path; // Full file path of the uploaded file
-        const folder = 'uploads'; // Or any folder you want to store the image in
-        const filename = file.filename; // The filename of the uploaded file
-        const contentType = file.mimetype; // The MIME type of the file
+        if (file) {
+            // Check if the file exists before attempting to use it
+            const fileBuffer = file.buffer;
+            const folder = 'uploads';
+            const filename = file.filename;
+            const contentType = file.mimetype;
 
-        const fileBuffer = file.buffer;
+            const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+            updateObj.image = s3ImageUrl; // Add the image URL to the update object
+        }
 
-        const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
-
+        // Update other fields if provided
         if (userFirstName) {
-            updateObj.firstName = userFirstName
+            updateObj.firstName = userFirstName;
         }
 
         if (userLastName) {
-            updateObj.lastName = userLastName
+            updateObj.lastName = userLastName;
         }
 
         if (userEmail) {
-            updateObj.email = userEmail
+            updateObj.email = userEmail;
         }
 
         if (userPhoneNumber) {
-            updateObj.phoneNumber = userPhoneNumber
+            updateObj.phoneNumber = userPhoneNumber;
         }
 
         if (userDateOfBirth) {
             const isValidDate = /^\d{2}-\d{2}-\d{4}$/.test(userDateOfBirth);
             if (!isValidDate) {
-                throw new BadRequestError('please provide date in day-month-year format')
+                throw new BadRequestError('Please provide date in day-month-year format');
             }
             const [day, month, year] = userDateOfBirth.split("-");
             const dob = new Date(`${year}-${month}-${day}`);
@@ -654,35 +654,25 @@ const userEditProfile = async (req, res, next) => {
         }
 
         if (userGender) {
-            updateObj.gender = userGender
+            updateObj.gender = userGender;
         }
 
-        if (file) {
-            // const filePath = file.filename; // use filename instead of path
-            // const basePath = `http://${req.get("host")}/public/uploads/`;
-            // const image = `${basePath}${filePath}`;
-            updateObj.image = s3ImageUrl;
-        }
-
-        const updateuser = await prisma.user.update({
-            where: {
-                id: id
-            },
+        const updateUser = await prisma.user.update({
+            where: { id: id },
             data: updateObj
         });
 
-        if (!updateuser) {
-            throw new ValidationError("user not update")
+        if (!updateUser) {
+            throw new ValidationError("User not updated");
         }
 
-        handlerOk(res, 200, updateuser, 'user updated successfully')
-
-
+        handlerOk(res, 200, updateUser, 'User updated successfully');
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
 
 const userLogOut = async (req, res, next) => {
     try {
