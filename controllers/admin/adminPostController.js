@@ -24,12 +24,12 @@ const createPost = async (req, res, next) => {
     // const basePath = `http://${req.get("host")}/public/uploads/`;
     // const blogImage = `${basePath}${filePath}`;
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
     const filename = file.filename; // The filename of the uploaded file
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -81,12 +81,12 @@ const updatePost = async (req, res, next) => {
     const { postId } = req.params;
     const updatedObj = {};
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
     const filename = file.filename; // The filename of the uploaded file
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
