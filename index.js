@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 3000;
-const API_PRIFEX = process.env.API_PRIFEX;  // Prefix for all routes
+const API_PREFIX = process.env.API_PREFIX || '/api/v1/';  // Prefix for all routes
 const rootRouter = require("./routes/index");
 const globalErrorMiddleware = require("./middleware/globalMiddleware");
 const dbConnect = require('./db/connectivity');
@@ -17,7 +17,7 @@ const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
 require("dotenv").config();
 
-console.log(API_PRIFEX, 'API_PRIFEX');
+console.log(API_PREFIX, 'API_PREFIX');
 
 
 app.use(cors({ origin: '*' }));
@@ -27,7 +27,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('io', io);
 // Prefix all routes with /api/v1
-app.use(API_PRIFEX, rootRouter);
+app.use(API_PREFIX, rootRouter);
 
 // Global error handling
 app.use(globalErrorMiddleware);
@@ -37,7 +37,7 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
-app.get(`${API_PRIFEX}user`, (req, res) => {
+app.get(`${API_PREFIX}user`, (req, res) => {
   res.send("welcome to user");
 });
 
