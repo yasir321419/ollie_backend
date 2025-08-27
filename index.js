@@ -41,6 +41,10 @@ app.get(`${API_PRIFEX}user`, (req, res) => {
   res.send("welcome to user");
 });
 
+app.get("/api/v1/home", (req, res) => {
+  res.send("welcome to home");
+});
+
 
 app.get("/", (req, res) => {
   res.send("server is running.....!!!!!");
