@@ -27,7 +27,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('io', io);
 // Prefix all routes with /api/v1
-app.use(API_PREFIX, rootRouter);
+// app.use(API_PREFIX, rootRouter);
+
+app.use(rootRouter);
+
 
 // Global error handling
 app.use(globalErrorMiddleware);

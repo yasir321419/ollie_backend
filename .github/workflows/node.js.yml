@@ -19,7 +19,6 @@ jobs:
       DATABASE_URL: "${{ secrets.DATABASE_URL }}"          # Use secrets
       LIVE_DATABASE_URL: "${{ secrets.LIVE_DATABASE_URL }}"# Preferred for production
       PORT: "${{ secrets.PORT }}"
-      API_PREFIX: "${{ secrets.API_PREFIX }}"
       SECRET_KEY: "${{ secrets.SECRET_KEY }}"
       MAIL_SERVICE: "${{ secrets.MAIL_SERVICE }}"
       MAIL_HOST: "${{ secrets.MAIL_HOST }}"
@@ -66,7 +65,6 @@ jobs:
           printf '%s\n' "LIVE_DATABASE_URL=${LIVE_DATABASE_URL}"  >> .env
           printf '%s\n' "NODE_ENV=production"                     >> .env
           printf '%s\n' "PORT=${PORT}"                            >> .env
-          printf '%s\n' "API_PREFIX=${API_PREFIX}"                >> .env
           printf '%s\n' "SECRET_KEY=${SECRET_KEY}"                >> .env
           printf '%s\n' "MAIL_SERVICE=${MAIL_SERVICE}"            >> .env
           printf '%s\n' "MAIL_HOST=${MAIL_HOST}"                  >> .env
