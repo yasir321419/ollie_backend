@@ -15,10 +15,12 @@ const io = socketIo(server);
 const ChatRoomController = require("./controllers/user/userChatService");
 const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
+const morgan = require('morgan');
 require("dotenv").config();
 
 console.log(API_PREFIX, 'API_PREFIX');
 
+app.use(morgan('dev'));
 
 app.use(cors({ origin: '*' }));
 
@@ -27,9 +29,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('io', io);
 // Prefix all routes with /api/v1
-// app.use(API_PREFIX, rootRouter);
+app.use(API_PREFIX, rootRouter);
 
-app.use(rootRouter);
+// app.use(rootRouter);
 
 
 // Global error handling

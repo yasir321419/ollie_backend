@@ -8,8 +8,8 @@ const adminRouter = require("./admin/index");
 // router.use("/user", userRouter);
 // router.use("/admin", adminRouter);
 
-router.use("/api/v1/user", userRouter);
-router.use("/api/v1/admin", adminRouter);
+router.use("/user", userRouter);
+router.use("/admin", adminRouter);
 
 
 
