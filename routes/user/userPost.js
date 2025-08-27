@@ -3,7 +3,7 @@ const validateRequest = require("../../middleware/validateRequest");
 const userPostRouter = require("express").Router();
 const userPostController = require("../../controllers/user/userPostController");
 const { verifyUserToken } = require("../../middleware/auth");
-const { userCreatePostSchema, userShowSinglePostSchema, userCommentPostSchema, userLikeAndReplyCommentPostSchema, userUpdatePostSchema, userAllPostSchema, userShowPostByInterestSchema } = require("../../schema/user/post");
+const { userCreatePostSchema, userShowSinglePostSchema, userCommentPostSchema, userLikeAndReplyCommentPostSchema, userUpdatePostSchema, userAllPostSchema, userShowPostByInterestSchema, userLikeAndUnlikePostSchema, userLikeAndReplyPostCommentSchema } = require("../../schema/user/post");
 const handleMultiPartData = require("../../middleware/multiPartData");
 
 
@@ -50,35 +50,35 @@ userPostRouter.delete(
 );
 
 userPostRouter.post(
-  "/likeAndUnlikeUserPost/:postId",
+  "/likeAndUnlikePost", // No need for dynamic route parameters here
   limiter,
   verifyUserToken,
-  validateRequest(userShowSinglePostSchema),
-  userPostController.likeAndUnlikeUserPost
+  validateRequest(userLikeAndUnlikePostSchema),
+  userPostController.likeAndUnlikePost
 );
 
 userPostRouter.post(
-  "/commentUserPost/:postId",
+  "/comment", // Route without :type or :postId in the URL
   limiter,
   verifyUserToken,
   validateRequest(userCommentPostSchema),
-  userPostController.commentUserPost
+  userPostController.commentPost
 );
 
 userPostRouter.post(
-  "/likeAndReplyOnUserPostComment/:commentId",
+  "/likeAndReplyOnComment", // No more commentId in URL; it's passed in the body
   limiter,
   verifyUserToken,
-  validateRequest(userLikeAndReplyCommentPostSchema),
-  userPostController.likeAndReplyOnUserPostComment
+  validateRequest(userLikeAndReplyPostCommentSchema),
+  userPostController.likeAndReplyOnComment
 );
 
+
 userPostRouter.get(
-  "/showUserPostCommentLikeReply",
-  limiter,
-  verifyUserToken,
-  userPostController.showUserPostCommentLikeReply
+  "/:type/showPostCommentLikeReply",  // Remove parentheses and simplify the route
+  userPostController.showPostCommentLikeReply
 );
+
 
 userPostRouter.get(
   "/showAllPostByInterest/:topicsId",

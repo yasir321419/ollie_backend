@@ -245,140 +245,188 @@ const deleteUserPost = async (req, res, next) => {
   }
 }
 
-
-const likeAndUnlikeUserPost = async (req, res, next) => {
+const likeAndUnlikePost = async (req, res, next) => {
   try {
     const { id, deviceToken, firstName } = req.user;
+    const { type, postId } = req.body;  // Get both type and postId from the body
 
-    const { postId } = req.params;
-    let action = '';
+    console.log('Type:', type);  // Debugging line to check if type is passed correctly
+    console.log('Post ID:', postId);  // Debugging line to check if postId is passed correctly
 
-    const findPost = await prisma.userPost.findUnique({
-      where: {
-        id: postId
-      }
-    });
+    // Check if it's a UserPost or Post type
+    const isUserPost = type === 'user-posts';
 
-    if (!findPost) {
-      throw new NotFoundError("user post not found")
+    // Find the correct post (UserPost or Post)
+    const post = isUserPost
+      ? await prisma.userPost.findUnique({ where: { id: postId } })
+      : await prisma.post.findUnique({ where: { id: postId } });
+
+    // If no post is found, throw an error
+    if (!post) {
+      throw new NotFoundError(`${isUserPost ? 'UserPost' : 'Post'} not found`);
     }
 
-    const existingLike = await prisma.userPostLike.findUnique({
-      where: {
-        userId_postId: {
-          userId: id,
-          postId: postId
-        }
+    // Determine the like model to use based on type
+    const likeModel = isUserPost ? prisma.userPostLike : prisma.postLike;
+    const likeCountModel = likeModel; // Use same model for counting likes
+
+    // Check if the user already liked the post
+    const existing = await likeModel.findUnique({
+      where: { userId_postId: { userId: id, postId } },
+    });
+
+    let action; // Declare action without TypeScript type annotation
+
+    // Use transaction for atomic operation
+    await prisma.$transaction(async (tx) => {
+      if (existing) {
+        // If already liked, unlike it
+        await tx[isUserPost ? 'userPostLike' : 'postLike'].delete({
+          where: { userId_postId: { userId: id, postId } },
+        });
+        action = 'unliked';
+      } else {
+        // If not liked, like it
+        await tx[isUserPost ? 'userPostLike' : 'postLike'].create({
+          data: { userId: id, postId },
+        });
+        action = 'liked';
       }
     });
 
-    if (existingLike) {
-      await prisma.userPostLike.delete({
-        where: {
-          userId_postId: {
-            userId: id,
-            postId: postId
-          }
-        }
-      })
+    // Get the like count for the post
+    const likeCount = await likeCountModel.count({ where: { postId } });
 
-      action = 'unlike'
-
-    } else {
-      await prisma.userPostLike.create({
-        data: {
-          userId: id,
-          postId: postId
-        }
-      })
-      action = 'liked'
-    }
-
-    const likeCount = await prisma.userPostLike.count({
-      where: {
-        postId: postId
-      }
-    });
-
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have ${action} the blog titled "${findPost.title}".`
-    // );
-
-    handlerOk(res, 200, { findPost, likeCount, action }, `Post ${action} succesfully`)
-  } catch (error) {
-    next(error)
+    // Return the result with action, like count, and post
+    return handlerOk(
+      res,
+      200,
+      { post, likeCount, action, type: isUserPost ? 'user-post' : 'post' },
+      `Post ${action} successfully`
+    );
+  } catch (err) {
+    console.error(err); // Log the error for debugging purposes
+    next(err);
   }
-}
+};
 
-const commentUserPost = async (req, res, next) => {
+
+const commentPost = async (req, res, next) => {
   try {
     const { id, firstName, deviceToken } = req.user;
+    const { type, postId, comment } = req.body;  // Get type, postId, and comment from the body
 
-    const { postId } = req.params;
+    console.log('Type:', type);  // Debugging line to check if type is passed correctly
+    console.log('Post ID:', postId);  // Debugging line to check if postId is passed correctly
+    console.log('Comment:', comment);  // Debugging line to check if comment is passed correctly
 
-    const { comment } = req.body;
+    // Check if it's a UserPost or Post type
+    const isUserPost = type === 'user-posts';
 
-    const findblog = await prisma.userPost.findUnique({
-      where: {
-        id: postId
-      }
-    });
+    // Find the correct post (UserPost or Post)
+    const post = isUserPost
+      ? await prisma.userPost.findUnique({ where: { id: postId } })
+      : await prisma.post.findUnique({ where: { id: postId } });
 
-    if (!findblog) {
-      throw new NotFoundError("Post not found")
+    // If no post is found, throw an error
+    if (!post) {
+      throw new NotFoundError(`${isUserPost ? 'UserPost' : 'Post'} not found`);
     }
 
-    const createComment = await prisma.userPostComment.create({
-      data: {
-        userId: id,
-        postId: postId,
-        comment: comment
-      },
-      include: {
-        user: true,
-        userpost: true
-      }
-    });
+    // Create a comment on the found post (UserPost or Post)
+    let createComment;
+    if (isUserPost) {
+      // For UserPost, create a comment in the UserPostComment model
+      createComment = await prisma.userPostComment.create({
+        data: {
+          userId: id,
+          postId: postId,
+          comment: comment,
+        },
+        include: {
+          user: true,
+          userpost: true,
+        },
+      });
+    } else {
+      // For regular Post, create a comment in the PostComment model
+      createComment = await prisma.postComment.create({
+        data: {
+          userId: id,
+          postId: postId,
+          comment: comment,
+        },
+        include: {
+          user: true,
+          userpost: true,  // Adjust according to your relationship (if necessary)
+        },
+      });
+    }
 
+    // If the comment creation failed, throw an error
     if (!createComment) {
-      throw new ValidationError("Failed to create comment")
+      throw new ValidationError("Failed to create comment");
     }
 
-    const countComment = await prisma.userPostComment.count({
-      where: {
-        postId: parseInt(postId)
-      }
-    });
+    // Get the updated comment count for the post
+    const countComment = await (isUserPost
+      ? prisma.userPostComment.count({
+        where: { postId: postId },
+      })
+      : prisma.postComment.count({
+        where: { postId: postId },
+      }));
 
-
+    // Optional: Send a notification (if necessary)
     // await sendNotification(
     //   id,
     //   deviceToken,
     //   `Hi ${firstName}, you commented on the blog titled "${findblog.title}".`
     // );
 
-    handlerOk(res, 200, { createComment, countComment }, 'comment on post successfully')
+    // Return the result with action, like count, and post
+    return handlerOk(
+      res,
+      200,
+      { createComment, countComment },
+      "Comment on post successfully"
+    );
   } catch (error) {
-    next(error)
+    console.error(error); // Log the error for debugging purposes
+    next(error);
   }
-}
+};
 
-const likeAndReplyOnUserPostComment = async (req, res, next) => {
+
+const likeAndReplyOnComment = async (req, res, next) => {
   try {
     const { id, firstName, deviceToken } = req.user;
-    const { commentId } = req.params;
-    const { like, reply } = req.body;
+    const { commentId, like, reply } = req.body;  // Get commentId, like, and reply from the body
 
-    const findcomment = await prisma.userPostComment.findUnique({
+    let findcomment;
+    let isUserPost;
+
+    // Check if it's a UserPostComment or PostComment based on the commentId
+    findcomment = await prisma.userPostComment.findUnique({
       where: {
-        id: commentId
-      }
+        id: commentId,
+      },
     });
 
+    // If the comment doesn't belong to a UserPost, check PostComment
     if (!findcomment) {
-      throw new NotFoundError("comment not found");
+      findcomment = await prisma.postComment.findUnique({
+        where: {
+          id: commentId,
+        },
+      });
+      isUserPost = false;  // Indicating this is a regular PostComment
+    } else {
+      isUserPost = true;  // This is a UserPostComment
+    }
+
+    if (!findcomment) {
+      throw new NotFoundError("Comment not found");
     }
 
     let liked = null;
@@ -387,57 +435,87 @@ const likeAndReplyOnUserPostComment = async (req, res, next) => {
     let message = "";
     const actions = [];
 
+    // Handle like/unlike logic
     if (like !== undefined) {
-
-
-      const existingLike = await prisma.userPostCommentLike.findUnique({
-        where: {
-          commentId_userId: {
-            commentId: commentId,
-            userId: id
-          }
-        }
-      })
-
-      if (like && !existingLike) {
-        liked = await prisma.userPostCommentLike.create({
-          data: {
-            commentId: commentId,
-            userId: id
-          }
-        })
-        actions.push("liked");
-        message += "Liked"
-      }
-      else if (!like && existingLike) {
-        await prisma.userPostCommentLike.delete({
+      const existingLike = isUserPost
+        ? await prisma.userPostCommentLike.findUnique({
           where: {
             commentId_userId: {
               commentId: commentId,
-              userId: id
-            }
-          }
+              userId: id,
+            },
+          },
+        })
+        : await prisma.postCommentLike.findUnique({
+          where: {
+            commentId_userId: {
+              commentId: commentId,
+              userId: id,
+            },
+          },
         });
-        unliked = true;
-        message += "UnLike"
-        actions.push("unliked");
 
+      if (like && !existingLike) {
+        liked = isUserPost
+          ? await prisma.userPostCommentLike.create({
+            data: {
+              commentId: commentId,
+              userId: id,
+            },
+          })
+          : await prisma.postCommentLike.create({
+            data: {
+              commentId: commentId,
+              userId: id,
+            },
+          });
+        actions.push("liked");
+        message += "Liked";
+      } else if (!like && existingLike) {
+        await (isUserPost
+          ? prisma.userPostCommentLike.delete({
+            where: {
+              commentId_userId: {
+                commentId: commentId,
+                userId: id,
+              },
+            },
+          })
+          : prisma.postCommentLike.delete({
+            where: {
+              commentId_userId: {
+                commentId: commentId,
+                userId: id,
+              },
+            },
+          }));
+        unliked = true;
+        message += "UnLiked";
+        actions.push("unliked");
       }
     }
 
+    // Handle reply logic
     if (reply) {
-      replied = await prisma.userPostComment.create({
-        data: {
-          userId: id,
-          postId: findcomment.postId,
-          comment: reply,
-          parentId: commentId
-        }
-      });
+      replied = isUserPost
+        ? await prisma.userPostComment.create({
+          data: {
+            userId: id,
+            postId: findcomment.postId,
+            comment: reply,
+            parentId: commentId,
+          },
+        })
+        : await prisma.postComment.create({
+          data: {
+            userId: id,
+            postId: findcomment.postId,
+            comment: reply,
+            parentId: commentId,
+          },
+        });
       actions.push("replied");
-
       message += message ? " and replied" : "Replied";
-
     }
 
     if (!message) {
@@ -446,41 +524,51 @@ const likeAndReplyOnUserPostComment = async (req, res, next) => {
       message += " successfully";
     }
 
-    const likeCount = await prisma.userPostCommentLike.count({
-      where: {
-        commentId: commentId
-      }
-    });
+    // Get the like count for the comment
+    const likeCount = isUserPost
+      ? await prisma.userPostCommentLike.count({
+        where: {
+          commentId: commentId,
+        },
+      })
+      : await prisma.postCommentLike.count({
+        where: {
+          commentId: commentId,
+        },
+      });
 
-    const commentCount = await prisma.userPostComment.count({
-      where: {
-        parentId: commentId
-      }
-    });
+    // Get the comment count (replies) for the comment
+    const commentCount = isUserPost
+      ? await prisma.userPostComment.count({
+        where: {
+          parentId: commentId,
+        },
+      })
+      : await prisma.postComment.count({
+        where: {
+          parentId: commentId,
+        },
+      });
 
-    // const truncatedComment = findcomment.comment.length > 30
-    //   ? findcomment.comment.substring(0, 30) + "..."
-    //   : findcomment.comment;
-
-    // const notificationMessage = `Hi ${firstName}, you have ${actions.join(" and ")} on the comment: "${truncatedComment}"`;
-
-    // await sendNotification(id, deviceToken, notificationMessage);
-
-    handlerOk(res, 200, { liked, replied, unliked, likeCount, commentCount }, message)
-
-
-
+    // Return the result
+    handlerOk(res, 200, { liked, replied, unliked, likeCount, commentCount }, message);
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 
-const showUserPostCommentLikeReply = async (req, res, next) => {
+const showPostCommentLikeReply = async (req, res, next) => {
   try {
-    const comment = await prisma.userPostComment.findMany({
+    const { type } = req.params; // Get the type from the URL (either 'posts' or 'user-posts')
+    const isUserPost = type === 'user-posts'; // Check if it's user-posts
+
+    const commentModel = isUserPost ? prisma.userPostComment : prisma.postComment; // Select the correct model
+
+    // Get top-level comments
+    const comments = await commentModel.findMany({
       where: {
-        parentId: null
+        parentId: null // Get top-level comments (parentId: null)
       },
       include: {
         user: true,
@@ -505,152 +593,32 @@ const showUserPostCommentLikeReply = async (req, res, next) => {
       }
     });
 
-    // Helper to recursively add likeCount to comments and replies
+    // Helper function to add like counts recursively
     const addLikeCounts = async (comments) => {
       return Promise.all(comments.map(async (comment) => {
-        const likeCount = await prisma.userPostCommentLike.count({
+        const likeCount = await prisma[isUserPost ? 'userPostCommentLike' : 'postCommentLike'].count({
           where: { commentId: comment.id }
         });
 
         comment.likeCount = likeCount;
 
         if (comment.replies && comment.replies.length > 0) {
-          comment.replies = await addLikeCounts(comment.replies);
+          comment.replies = await addLikeCounts(comment.replies); // Recursive call to count likes for replies
         }
 
         return comment;
       }));
     };
 
-    const commentsWithCounts = await addLikeCounts(comment);
+    const commentsWithCounts = await addLikeCounts(comments); // Add like counts to comments and replies
 
     handlerOk(res, 200, commentsWithCounts, "All comments with nested replies and like counts retrieved successfully");
 
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
-
-// const showAllPostByInterest = async (req, res, next) => {
-//   try {
-//     const { id } = req.user;
-//     const { topicsId } = req.params;
-//     const page = parseInt(req.query.page) || 1;
-//     const limit = parseInt(req.query.limit) || 10;
-//     const skip = (page - 1) * limit;
-
-//     // Find the selected topic
-//     const findtopic = await prisma.interest.findUnique({
-//       where: {
-//         id: topicsId
-//       }
-//     });
-
-//     if (!findtopic) {
-//       throw new NotFoundError("Topic not found");
-//     }
-
-//     // Fetch posts related to the selected topic
-//     const findpostbytopics = await Promise.all([
-//       prisma.post.findMany({
-//         where: { categoryId: findtopic.id },
-//         include: {
-//           category: true,
-//           admin: true,
-//           _count: { select: { PostLike: true, postcomments: true } },
-//           savedByUsers: {
-//             where: {
-//               userId: id
-//             },
-//             select: {
-//               id: true
-//             }
-//           },
-//           PostLike: {
-//             where: {
-//               userId: id
-//             },
-//             select: {
-//               id: true
-//             }
-//           }
-//         },
-//         skip,
-//         take: limit,
-//         orderBy: { createdAt: 'desc' },
-//       }),
-//       prisma.post.count({
-//         where: { categoryId: findtopic.id }
-//       }),
-
-//       prisma.userPost.findMany({
-//         where: {
-//           userId: id
-//         },
-//         include: {
-//           user: true,
-//           category: true,
-//           _count: { select: { userpostlikes: true, userpostcomments: true } },
-//           savedByUsers: {
-//             where: {
-//               userId: id
-//             },
-//             select: {
-//               id: true
-//             }
-//           },
-//           userpostlikes: { // Correct relation to userpostlikes
-//             where: {
-//               userId: id
-//             },
-//             select: {
-//               id: true
-//             }
-//           }
-//         },
-//         skip,
-//         take: limit,
-//       })
-//     ]);
-
-//     // Destructure the results
-//     const posts = findpostbytopics[0];
-//     const totalCount = findpostbytopics[1];
-//     const userPosts = findpostbytopics[2];
-
-//     // Add `isSavePost` and `isLikePost` flag to each post from the topic
-//     posts.forEach(post => {
-//       post.isSavePost = post.savedByUsers.length > 0;
-//       post.isLikePost = post.PostLike.length > 0;
-//     });
-
-//     // Add `isSavePost` and `isLikePost` flag to each user post
-//     userPosts.forEach(userpost => {
-//       userpost.isSavePost = userpost.savedByUsers.length > 0;
-//       userpost.isLikePost = userpost.userpostlikes.length > 0; // Correct check
-//     });
-
-
-
-//     const allPosts = [...posts, ...userPosts];
-
-//     if (allPosts.length === 0) {
-//       throw new NotFoundError("No posts found");
-//     }
-
-//     // Return the posts with total count
-//     return res.status(200).json({
-//       success: true,
-//       message: "Posts found successfully",
-//       data: allPosts,
-//       totalCount
-//     });
-
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 
 const showAllPostByInterest = async (req, res, next) => {
@@ -771,10 +739,6 @@ const showAllPostByInterest = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
 
 
 const showAllPostByUserSelectedInterest = async (req, res, next) => {
@@ -913,10 +877,10 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
 module.exports = {
   createUserPost,
   showUserAllPost,
-  likeAndUnlikeUserPost,
-  commentUserPost,
-  likeAndReplyOnUserPostComment,
-  showUserPostCommentLikeReply,
+  likeAndUnlikePost,
+  commentPost,
+  likeAndReplyOnComment,
+  showPostCommentLikeReply,
   showSingleUserPost,
   updateUserPost,
   deleteUserPost,

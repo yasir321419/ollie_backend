@@ -27,10 +27,48 @@ const userShowSinglePostSchema = Joi.object({
   query: Joi.object({}),
   params: Joi.object({
     postId: Joi.string().required(),
+
   }),
   body: Joi.object({
+
   }),
 });
+
+const userLikeAndUnlikePostSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+
+  }),
+  body: Joi.object({
+    postId: Joi.string().required(),
+    type: Joi.string().required()
+  }),
+});
+
+const userCommentPostSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+
+  }),
+  body: Joi.object({
+    postId: Joi.string().required(),
+    type: Joi.string().required(),
+    comment: Joi.string().required(),
+  }),
+});
+
+const userLikeAndReplyPostCommentSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+
+  }),
+  body: Joi.object({
+    commentId: Joi.string().required(),
+    like: Joi.boolean().required(),
+    reply: Joi.string().required(),
+  }),
+});
+
 
 
 const userUpdatePostSchema = Joi.object({
@@ -44,24 +82,17 @@ const userUpdatePostSchema = Joi.object({
   }),
 });
 
-const userCommentPostSchema = Joi.object({
-  query: Joi.object({}),
-  params: Joi.object({
-    postId: Joi.string().required(),
-  }),
-  body: Joi.object({
-    comment: Joi.string().required()
-  }),
-});
+
 
 const userLikeAndReplyCommentPostSchema = Joi.object({
   query: Joi.object({}),
   params: Joi.object({
-    commentId: Joi.string().required()
   }),
   body: Joi.object({
     like: Joi.boolean().optional(),
-    reply: Joi.string().optional()
+    reply: Joi.string().optional(),
+    commentId: Joi.string().required()
+
   }),
 });
 
@@ -86,5 +117,7 @@ module.exports = {
   userLikeAndReplyCommentPostSchema,
   userUpdatePostSchema,
   userAllPostSchema,
-  userShowPostByInterestSchema
+  userShowPostByInterestSchema,
+  userLikeAndUnlikePostSchema,
+  userLikeAndReplyPostCommentSchema
 }
