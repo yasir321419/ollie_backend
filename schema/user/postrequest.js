@@ -46,11 +46,30 @@ const userAcceptVolunteerRequestSchema = Joi.object({
   }),
 });
 
+const volunteerMarkSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+    requestId: Joi.string().required()
+  }),
+  body: Joi.object({
+  }),
+});
+
+const ownerMarkSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({
+    requestId: Joi.string().required()
+  }),
+  body: Joi.object({
+  }),
+});
 
 
 module.exports = {
   userCreatePostRequestSchema,
   userSendVolunteerRequestSchema,
   userAcceptVolunteerRequestSchema,
-  userShowPostRequestSchema
+  userShowPostRequestSchema,
+  volunteerMarkSchema,
+  ownerMarkSchema
 };

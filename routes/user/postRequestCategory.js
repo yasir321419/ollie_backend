@@ -4,7 +4,7 @@ const validateRequest = require("../../middleware/validateRequest");
 const userPostRequestRouter = require("express").Router();
 const userPostRequestController = require("../../controllers/user/userPostRequestController");
 const { verifyUserToken } = require("../../middleware/auth");
-const { userCreatePostRequestSchema, userSendVolunteerRequestSchema, userAcceptVolunteerRequestSchema, userShowPostRequestSchema } = require("../../schema/user/postrequest");
+const { userCreatePostRequestSchema, userSendVolunteerRequestSchema, userAcceptVolunteerRequestSchema, userShowPostRequestSchema, volunteerMarkSchema, ownerMarkSchema } = require("../../schema/user/postrequest");
 
 userPostRequestRouter.get(
   "/getPostRequestCaterogy",
@@ -57,7 +57,7 @@ userPostRequestRouter.post(
   "/markAsCompletedByVolunteer/:requestId",
   limiter,
   verifyUserToken,
-  validateRequest(userAcceptVolunteerRequestSchema),
+  validateRequest(volunteerMarkSchema),
   userPostRequestController.markAsCompletedByVolunteer
 );
 
@@ -65,7 +65,7 @@ userPostRequestRouter.post(
   "/confirmTaskCompletedByOwner/:requestId",
   limiter,
   verifyUserToken,
-  validateRequest(userAcceptVolunteerRequestSchema),
+  validateRequest(ownerMarkSchema),
   userPostRequestController.confirmTaskCompletedByOwner
 );
 
