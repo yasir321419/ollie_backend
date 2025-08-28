@@ -73,7 +73,7 @@ userPostRouter.post(
   userPostController.likeAndReplyOnComment
 );
 
-userPostRouter.get(
+userPostRouter.post(
   "/showPostCommentLikeReply",  // Route without type and postId in the URL
   userPostController.showPostCommentLikeReply
 );
