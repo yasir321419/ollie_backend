@@ -64,8 +64,8 @@ const userLikeAndReplyPostCommentSchema = Joi.object({
   }),
   body: Joi.object({
     commentId: Joi.string().required(),
-    like: Joi.boolean().required(),
-    reply: Joi.string().required(),
+    like: Joi.boolean().optional(),
+    reply: Joi.string().optional(),
   }),
 });
 
