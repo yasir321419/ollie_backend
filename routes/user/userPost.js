@@ -73,9 +73,8 @@ userPostRouter.post(
   userPostController.likeAndReplyOnComment
 );
 
-
 userPostRouter.get(
-  "/:type/showPostCommentLikeReply",  // Remove parentheses and simplify the route
+  "/showPostCommentLikeReply",  // Route without type and postId in the URL
   userPostController.showPostCommentLikeReply
 );
 
