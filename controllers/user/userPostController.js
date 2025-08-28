@@ -560,66 +560,7 @@ const likeAndReplyOnComment = async (req, res, next) => {
 };
 
 
-// const showPostCommentLikeReply = async (req, res, next) => {
-//   try {
-//     const { type } = req.params; // Get the type from the URL (either 'posts' or 'user-posts')
-//     const isUserPost = type === 'user-posts'; // Check if it's user-posts
 
-//     const commentModel = isUserPost ? prisma.userPostComment : prisma.postComment; // Select the correct model
-
-//     // Get top-level comments
-//     const comments = await commentModel.findMany({
-//       where: {
-//         parentId: null // Get top-level comments (parentId: null)
-//       },
-//       include: {
-//         user: true,
-//         replies: {
-//           include: {
-//             user: true,
-//             replies: {
-//               include: {
-//                 user: true,
-//                 replies: {
-//                   include: {
-//                     user: true
-//                   }
-//                 }
-//               }
-//             }
-//           }
-//         }
-//       },
-//       orderBy: {
-//         createdAt: "desc"
-//       }
-//     });
-
-//     // Helper function to add like counts recursively
-//     const addLikeCounts = async (comments) => {
-//       return Promise.all(comments.map(async (comment) => {
-//         const likeCount = await prisma[isUserPost ? 'userPostCommentLike' : 'postCommentLike'].count({
-//           where: { commentId: comment.id }
-//         });
-
-//         comment.likeCount = likeCount;
-
-//         if (comment.replies && comment.replies.length > 0) {
-//           comment.replies = await addLikeCounts(comment.replies); // Recursive call to count likes for replies
-//         }
-
-//         return comment;
-//       }));
-//     };
-
-//     const commentsWithCounts = await addLikeCounts(comments); // Add like counts to comments and replies
-
-//     handlerOk(res, 200, commentsWithCounts, "All comments with nested replies and like counts retrieved successfully");
-
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 const showPostCommentLikeReply = async (req, res, next) => {
   try {
