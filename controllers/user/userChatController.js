@@ -3,7 +3,8 @@ const { ConflictError, NotFoundError, ValidationError } = require("../../resHand
 const { handlerOk } = require("../../resHandler/responseHandler");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
-
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 
 
@@ -261,7 +262,7 @@ const uploadAttachment = async (req, res, next) => {
 
     const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
     const fileBuffer = fs.readFileSync(filePath);

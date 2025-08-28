@@ -6,8 +6,8 @@ const { genToken } = require("../../utils/generateToken");
 const { hashPassword, comparePassword } = require("../../utils/passwordHashed");
 const fs = require('fs');
 const uploadFileWithFolder = require("../../utils/s3Upload");
-
-
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 const adminLogin = async (req, res, next) => {
   try {
@@ -60,43 +60,6 @@ const adminLogin = async (req, res, next) => {
   }
 }
 
-// const editImage = async (req, res, next) => {
-//   try {
-//     const file = req.file;
-//     const { id } = req.user;
-
-//     // const filePath = file.filename; // use filename instead of path
-//     // const basePath = `http://${req.get("host")}/public/uploads/`;
-//     // const image = `${basePath}${filePath}`;
-
-//     const filePath = file.path; // Full file path of the uploaded file
-//     const folder = 'uploads'; // Or any folder you want to store the image in
-//     const filename = file.filename; // The filename of the uploaded file
-//     const contentType = file.mimetype; // The MIME type of the file
-
-//     const fileBuffer = fs.readFileSync(filePath);
-
-//     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
-
-
-//     const updateadmin = await prisma.admin.update({
-//       where: {
-//         id
-//       },
-//       data: {
-//         image: s3ImageUrl
-//       }
-//     });
-
-//     if (!updateadmin) {
-//       throw new ValidationError("admin not upload image")
-//     }
-
-//     handlerOk(res, 200, updateadmin, "admin upload image successfully")
-//   } catch (error) {
-//     next(error)
-//   }
-// }
 
 const editImage = async (req, res, next) => {
   try {
@@ -109,7 +72,9 @@ const editImage = async (req, res, next) => {
     }
 
     const folder = 'uploads'; // S3 folder where you want to store the image
-    const filename = file.filename; // The filename of the uploaded file
+
+    // Generate a unique filename using original name and uuid
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
     // Use the buffer directly from req.file.buffer (no need to use file.path)

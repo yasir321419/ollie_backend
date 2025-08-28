@@ -10,6 +10,8 @@ const { genToken } = require("../../utils/generateToken");
 const { hashPassword, comparePassword } = require("../../utils/passwordHashed");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 
 const userRegister = async (req, res, next) => {
@@ -619,7 +621,7 @@ const userEditProfile = async (req, res, next) => {
             // Check if the file exists before attempting to use it
             const fileBuffer = file.buffer;
             const folder = 'uploads';
-            const filename = file.filename;
+            const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
             const contentType = file.mimetype;
 
             const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
