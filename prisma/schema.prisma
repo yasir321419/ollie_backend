@@ -147,7 +147,7 @@ model Post {
 model UserPost {
   id         String          @id @default(uuid())
   title      String
-  content    String
+  content    String @db.LongText
   categoryId String
   image      String?
   userId     String
