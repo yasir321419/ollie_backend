@@ -798,7 +798,7 @@ const getFilterBlog = async (req, res, next) => {
     handlerOk(
       res,
       200,
-      blogs,
+      ...blogs,
       `${type} blogs found successfully`);
   } catch (error) {
     next(error)
