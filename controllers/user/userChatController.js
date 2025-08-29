@@ -497,5 +497,5 @@ module.exports = {
   getGroupChatRooms,
   getFeatureGroups,
   uploadAttachment,
-  addparticipantInChatRoom
+  addparticipantInChatRoom,
 }
