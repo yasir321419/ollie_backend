@@ -426,7 +426,7 @@ model Interest {
 model PostRequest {
   id           String                   @id @default(uuid())
   scheduledAt  DateTime
-  description  String
+  description  String @db.LongText
   latitude     Float
   longitude    Float
   status       PostRequestStatus     @default(NoRequest)
@@ -463,7 +463,7 @@ model ChatRoom {
   id                String                   @id @default(uuid())
   type              String                // Either "GROUP" or "ONE_TO_ONE"
   name              String?               // Optional, should be available for GROUP chat
-  description       String?
+  description       String? @db.LongText
   image             String?
   creatorId         String
   creatorType       String
