@@ -130,7 +130,7 @@ model Post {
   adminId    String
   type       BlogType?
   views        Int           @default(0) // 👈 Add this line
-
+isReport    Boolean     @default(false)
   category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   admin      Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
   // postlikes      PostLike[]
@@ -152,6 +152,7 @@ model UserPost {
   image      String?
   userId     String
   views      Int           @default(0) // 👈 Add this line  
+  isReport    Boolean     @default(false)
   category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userpostlikes      UserPostLike[]

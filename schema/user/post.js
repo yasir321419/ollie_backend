@@ -109,6 +109,18 @@ const userShowPostByInterestSchema = Joi.object({
   }),
 });
 
+const userReportPostSchema = Joi.object({
+  query: Joi.object({
+
+  }),
+  params: Joi.object({
+    postId: Joi.string().required()
+  }),
+  body: Joi.object({
+
+  }),
+});
+
 
 module.exports = {
   userCreatePostSchema,
@@ -119,5 +131,6 @@ module.exports = {
   userAllPostSchema,
   userShowPostByInterestSchema,
   userLikeAndUnlikePostSchema,
-  userLikeAndReplyPostCommentSchema
+  userLikeAndReplyPostCommentSchema,
+  userReportPostSchema
 }

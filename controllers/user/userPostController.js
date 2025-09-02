@@ -877,6 +877,110 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
   }
 };
 
+// const userReportPost = async (req, res, next) => {
+//   try {
+//     const { postId } = req.params;
+//     const { id } = req.user;
+//     const findpost = await prisma.post.findUnique({
+//       where: {
+//         id: postId,
+
+//       }
+//     });
+
+//     const finduserpost = await prisma.userPost.findUnique({
+//       where: {
+//         id: postId,
+
+//       }
+//     });
+
+//     if (findpost) {
+
+//       const reportpost = await prisma.post.update({
+//         where: {
+//           id: findpost.id
+//         },
+//         data: {
+//           isReport: true
+//         }
+//       });
+
+//       handlerOk(res, 200, reportpost, 'user report against the post is successfully',)
+
+//     }
+
+//     if (finduserpost) {
+//       const reportpost = await prisma.userPost.update({
+//         where: {
+//           id: findpost.id,
+//           userId: {
+//             not: {
+//               id
+//             }
+//           }
+//         },
+//         data: {
+//           isReport: true
+//         }
+//       });
+
+//       handlerOk(res, 200, reportpost, 'user report against the post is successfully',)
+//     }
+
+//     throw new NotFoundError("post not found")
+
+//   } catch (error) {
+//     next(error)
+//   }
+// }
+
+const userReportPost = async (req, res, next) => {
+  try {
+    const { postId } = req.params;
+    const { id: userId } = req.user;
+
+    // 1) Try ADMIN-authored Post
+    const adminPost = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, adminId: true }
+    });
+
+    if (adminPost) {
+      if (adminPost.adminId === userId) {
+        throw new ValidationError("You can't report your own post.");
+      }
+      const updated = await prisma.post.update({
+        where: { id: adminPost.id },
+        data: { isReport: true }
+      });
+      return handlerOk(res, 200, updated, 'Reported admin post successfully');
+    }
+
+    // 2) Try USER-authored UserPost
+    const userPost = await prisma.userPost.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true }
+    });
+
+    if (userPost) {
+      if (userPost.userId === userId) {
+        throw new ValidationError("You can't report your own post.");
+      }
+      const updated = await prisma.userPost.update({
+        where: { id: userPost.id },
+        data: { isReport: true }
+      });
+      return handlerOk(res, 200, updated, 'Reported user post successfully');
+    }
+
+    throw new NotFoundError('post not found');
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 
 
@@ -894,5 +998,6 @@ module.exports = {
   updateUserPost,
   deleteUserPost,
   showAllPostByInterest,
-  showAllPostByUserSelectedInterest
+  showAllPostByUserSelectedInterest,
+  userReportPost
 }
