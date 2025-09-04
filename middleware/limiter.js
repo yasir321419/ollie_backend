@@ -26,12 +26,12 @@ const limiter = rateLimit({
 
 // AI-specific rate limiter (more restrictive)
 const aiLimiter = rateLimit({
-  windowMs: parseInt(process.env.AI_RATE_LIMIT_WINDOW) || 30 * 1000, // 30 seconds  
-  max: parseInt(process.env.AI_RATE_LIMIT_MAX) || 15, // Allow more for AI
+  windowMs: parseInt(process.env.AI_RATE_LIMIT_WINDOW) || 60 * 1000, // 60 seconds  
+  max: parseInt(process.env.AI_RATE_LIMIT_MAX) || 100, // More generous for ElevenLabs
   message: {
     success: false,
-    message: "Too many AI requests from this IP, please try again after 30 seconds.",
-    retryAfter: 30
+    message: "Too many AI requests from this IP, please try again after 60 seconds.",
+    retryAfter: 60
   },
   standardHeaders: true,
   legacyHeaders: false,

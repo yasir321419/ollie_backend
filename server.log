@@ -1,0 +1,61 @@
+[2025-09-04 15:37:57] DEBUG Creating transport: nodemailer (6.10.1; +https://nodemailer.com/; SMTP (pool)/6.10.1[client:6.10.1])
+🚀 Ollie Backend server running on port 3002
+🤖 AI WebSocket: ws://localhost:3002/ai
+📊 API Base URL: http://localhost:3002/api/v1
+✅ Database connected successfully
+✅ Admin already exists. Skipping seeding.
+🤖 AI API Call: POST /api/v1/ai/updateContext
+Headers: {
+  "host": "localhost:3002",
+  "user-agent": "curl/7.81.0",
+  "accept": "*/*",
+  "content-type": "application/json",
+  "x-access-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNhMTU2NTM0LTgyMjYtNGIxZi1iODFlLWJiMDBlOTYzZjMxMCIsInVzZXJUeXBlIjoiVVNFUiIsImlhdCI6MTc1Njk5NjA3MywiZXhwIjoxNzU3MDgyNDczfQ.Agtki_N907F5yZnOGWPUtknDmR08gZCbGX3f7qdFjWM",
+  "content-length": "143"
+}
+Body: {
+  "additional_context": "I am a software developer who loves AI and machine learning. I prefer morning workouts and healthy Mediterranean food."
+}
+[0mPOST /api/v1/ai/updateContext [32m200[0m 75.860 ms - 337[0m
+🤖 AI API Call: GET /api/v1/ai/getLatestEvents
+Headers: {
+  "host": "localhost:3002",
+  "connection": "keep-alive",
+  "x-access-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNhMTU2NTM0LTgyMjYtNGIxZi1iODFlLWJiMDBlOTYzZjMxMCIsInVzZXJUeXBlIjoiVVNFUiIsImlhdCI6MTc1NzAwMDA0MywiZXhwIjoxNzU3MDg2NDQzfQ.QFTvvY0uhG-rtNwfWztuDH5Ir7_LBwUkNzbVgsO0zww",
+  "sec-ch-ua-platform": "\"Linux\"",
+  "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "sec-ch-ua": "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"",
+  "content-type": "application/json",
+  "sec-ch-ua-mobile": "?0",
+  "accept": "*/*",
+  "sec-fetch-site": "same-origin",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-dest": "empty",
+  "accept-encoding": "gzip, deflate, br, zstd",
+  "accept-language": "en-US,en;q=0.9",
+  "cookie": "ajs_anonymous_id=a4bcbe79-816c-4065-b28b-d2c2b13e55a1; _streamlit_xsrf=2|cf90c552|92395f6b435c22d3219e6da02eed81fb|1751921787; __stripe_mid=929d0caf-1ce4-4f7f-a33a-b0c80b402a54298cd4; rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2FMeLLkQFn7HWkFK6c9NJygITCf5lTYSqA%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX19AYGHuWnIxSeLwVFHagRKBTzpJFy%2FbitY%3D; n8n-auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU5ZjFlNWRiLWRkMGMtNGU4ZC04ZWZiLWZlYzhmZTU2OGFmNSIsImhhc2giOiJKYld6VlNmdElTIiwiYnJvd3NlcklkIjoiSVFDNUJ1ZmJHSXpzYXB2aHpEeGpWZFFNanhOd09VZmhRSWJRN1BSOVZDcz0iLCJ1c2VkTWZhIjpmYWxzZSwiaWF0IjoxNzU2NDE0OTQ0LCJleHAiOjE3NTcwMTk3NDR9.s7nNNOBIo0uucTt8yc0OxHV8I9oIRmttNGdftOeX18k; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX19vJjVqaFijt0GR0PtzCJQ5NBVrZ4BIg8wkXVSgSYbNn876ujF3R4v0MHGsSL5YvEiD9p2UC3mtqw%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19eZcr5Pc%2FuLhRtHVHat8E51MzIeONfeg8IF7HeKjdcwoHezaKiEHciY%2BslKXyCFpjg9PQE8pW%2BXRHXgZUB%2F%2BM70otXBDRQ%2FFFaKre2Ya%2F7VULfhTLdMsuDbtwdVxvBMf%2BvT05Jac44REq%2BM0vJ%2FH6Rtd9dHy9%2Bzxw%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2FOBpzyyIL%2FdKVaAhgGPsKwQCAqwx5sGZrW13CBGK2TBjiEVScTtTHbkYXbuMsBLLz1Ri%2BxOpJmT2NdpdFQIBis3pRzk4k3tlPu05x1dG59gTHavR8ISPozyxKE04ckDW0CvsuKBV492g%3D%3D; rl_session=RudderEncrypt%3AU2FsdGVkX1%2BZjhF2tCQ5fd3nWB0jJjbx9wl%2BPqC%2Bn85DejYOw2tUpvEJ5xc%2FZDdfPKevb14I0Nf0QWDVPForK8%2FPg4ivytDbcn6Pn73%2FyzEE20jcigZubEQntpPVPNvzSomwtYQ7UouKoqiTqWvjUw%3D%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%22707d19de2c533de445de7c8337fe4b2b7c8832a052cec193e47bf898741c07a4%2359f1e5db-dd0c-4e8d-8efb-fec8fe568af5%22%2C%22%24sesid%22%3A%5B1756589334347%2C%220198fce2-1a9f-7b56-80ed-82e0e8253379%22%2C1756589333151%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22http%3A%2F%2Flocalhost%3A5678%2Fsetup%22%7D%7D; __next_hmr_refresh_hash__=265",
+  "if-none-match": "W/\"14b-YFWH/Gepl0REhOp5pgdU/e3IkSQ\""
+}
+Body: undefined
+[0mGET /api/v1/ai/getLatestEvents [36m304[0m 15.758 ms - -[0m
+🤖 AI API Call: GET /api/v1/ai/getUserSocialInfo
+Headers: {
+  "host": "localhost:3002",
+  "connection": "keep-alive",
+  "x-access-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNhMTU2NTM0LTgyMjYtNGIxZi1iODFlLWJiMDBlOTYzZjMxMCIsInVzZXJUeXBlIjoiVVNFUiIsImlhdCI6MTc1NzAwMDA0MywiZXhwIjoxNzU3MDg2NDQzfQ.QFTvvY0uhG-rtNwfWztuDH5Ir7_LBwUkNzbVgsO0zww",
+  "sec-ch-ua-platform": "\"Linux\"",
+  "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "sec-ch-ua": "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"",
+  "content-type": "application/json",
+  "sec-ch-ua-mobile": "?0",
+  "accept": "*/*",
+  "sec-fetch-site": "same-origin",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-dest": "empty",
+  "accept-encoding": "gzip, deflate, br, zstd",
+  "accept-language": "en-US,en;q=0.9",
+  "cookie": "ajs_anonymous_id=a4bcbe79-816c-4065-b28b-d2c2b13e55a1; _streamlit_xsrf=2|cf90c552|92395f6b435c22d3219e6da02eed81fb|1751921787; __stripe_mid=929d0caf-1ce4-4f7f-a33a-b0c80b402a54298cd4; rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2FMeLLkQFn7HWkFK6c9NJygITCf5lTYSqA%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX19AYGHuWnIxSeLwVFHagRKBTzpJFy%2FbitY%3D; n8n-auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU5ZjFlNWRiLWRkMGMtNGU4ZC04ZWZiLWZlYzhmZTU2OGFmNSIsImhhc2giOiJKYld6VlNmdElTIiwiYnJvd3NlcklkIjoiSVFDNUJ1ZmJHSXpzYXB2aHpEeGpWZFFNanhOd09VZmhRSWJRN1BSOVZDcz0iLCJ1c2VkTWZhIjpmYWxzZSwiaWF0IjoxNzU2NDE0OTQ0LCJleHAiOjE3NTcwMTk3NDR9.s7nNNOBIo0uucTt8yc0OxHV8I9oIRmttNGdftOeX18k; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX19vJjVqaFijt0GR0PtzCJQ5NBVrZ4BIg8wkXVSgSYbNn876ujF3R4v0MHGsSL5YvEiD9p2UC3mtqw%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19eZcr5Pc%2FuLhRtHVHat8E51MzIeONfeg8IF7HeKjdcwoHezaKiEHciY%2BslKXyCFpjg9PQE8pW%2BXRHXgZUB%2F%2BM70otXBDRQ%2FFFaKre2Ya%2F7VULfhTLdMsuDbtwdVxvBMf%2BvT05Jac44REq%2BM0vJ%2FH6Rtd9dHy9%2Bzxw%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2FOBpzyyIL%2FdKVaAhgGPsKwQCAqwx5sGZrW13CBGK2TBjiEVScTtTHbkYXbuMsBLLz1Ri%2BxOpJmT2NdpdFQIBis3pRzk4k3tlPu05x1dG59gTHavR8ISPozyxKE04ckDW0CvsuKBV492g%3D%3D; rl_session=RudderEncrypt%3AU2FsdGVkX1%2BZjhF2tCQ5fd3nWB0jJjbx9wl%2BPqC%2Bn85DejYOw2tUpvEJ5xc%2FZDdfPKevb14I0Nf0QWDVPForK8%2FPg4ivytDbcn6Pn73%2FyzEE20jcigZubEQntpPVPNvzSomwtYQ7UouKoqiTqWvjUw%3D%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%22707d19de2c533de445de7c8337fe4b2b7c8832a052cec193e47bf898741c07a4%2359f1e5db-dd0c-4e8d-8efb-fec8fe568af5%22%2C%22%24sesid%22%3A%5B1756589334347%2C%220198fce2-1a9f-7b56-80ed-82e0e8253379%22%2C1756589333151%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22http%3A%2F%2Flocalhost%3A5678%2Fsetup%22%7D%7D; __next_hmr_refresh_hash__=265",
+  "if-none-match": "W/\"bd-VMfASAK363Y8OsupFDdUa87mrDo\""
+}
+Body: undefined
+[0mGET /api/v1/ai/getUserSocialInfo [36m304[0m 43.436 ms - -[0m

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Production API Testing - api.theollie.app</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .api-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .api-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .api-buttons button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .api-buttons button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .api-buttons button:contains("🟢") {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .api-buttons button:contains("🟡") {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: white;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .auth-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .auth-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .response-area {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+        
+        .section-title {
+            font-size: 1.4em;
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Production API Testing</h1>
+            <p>Testing deployed backend at <strong>https://api.theollie.app/</strong></p>
+        </div>
+        
+        <div class="main-content">
+            <div class="api-section">
+                <div class="section-title">🔐 Authentication</div>
+                <div class="auth-section">
+                    <div class="auth-box">
+                        <h3>Login</h3>
+                        <input type="email" id="loginEmail" placeholder="Email" value="test@example.com">
+                        <input type="password" id="loginPassword" placeholder="Password" value="123456">
+                        <button onclick="login()">Login</button>
+                    </div>
+                    <div class="auth-box">
+                        <h3>Register New User</h3>
+                        <input type="email" id="registerEmail" placeholder="Email" value="production-test-new@example.com">
+                        <button onclick="register()">Send OTP</button>
+                    </div>
+                </div>
+                <div id="authStatus" class="status" style="display: none;"></div>
+            </div>
+            
+            <div class="api-section">
+                <div class="section-title">🧪 API Testing</div>
+                <p style="margin-bottom: 15px; color: #666;">
+                    Test individual API endpoints on the production server:
+                </p>
+                
+                <div class="api-buttons">
+                    <!-- FREE ENDPOINTS -->
+                    <button onclick="testAPI('/ai/health')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Health Check</button>
+                    <button onclick="testAPI('/ai/getUserInfo')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Get User Info</button>
+                    <button onclick="testAPI('/ai/getUserTasks')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Get User Tasks</button>
+                    <button onclick="testAPI('/ai/getBlogTitles')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Get Blog Titles</button>
+                    <button onclick="testAPI('/ai/getLatestEvents')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Get Latest Events</button>
+                    <button onclick="testUserAPI('/user/auth/getUserContext')" style="background: linear-gradient(135deg, #28a745, #20c997);">🟢 Get User Context</button>
+                    
+                    <!-- PREMIUM ENDPOINTS -->
+                    <button onclick="testCreatePost()" style="background: linear-gradient(135deg, #ffc107, #fd7e14);">🟡 Create Post (1 credit)</button>
+                    <button onclick="testUpdateContext()" style="background: linear-gradient(135deg, #ffc107, #fd7e14);">🟡 Update Context (1 credit)</button>
+                    <button onclick="testCreateTask()" style="background: linear-gradient(135deg, #ffc107, #fd7e14);">🟡 Create Task (1 credit)</button>
+                </div>
+            </div>
+            
+            <div id="apiResponse" class="response-area">
+                Click any button above to test the production API endpoints...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://api.theollie.app/api/v1';
+        let authToken = localStorage.getItem('prodAuthToken');
+        
+        // Show auth status on page load
+        window.onload = function() {
+            updateAuthStatus();
+        }
+        
+        function updateAuthStatus() {
+            const statusDiv = document.getElementById('authStatus');
+            statusDiv.style.display = 'block';
+            if (authToken) {
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ Authenticated - Ready to test APIs';
+            } else {
+                statusDiv.className = 'status info';
+                statusDiv.textContent = 'ℹ️ Please login to test authenticated endpoints';
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showResponse('Please enter both email and password', 'error');
+                return;
+            }
+            
+            showResponse('Logging in...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/user/auth/userLogin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userEmail: email,
+                        userPassword: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    authToken = data.data.userToken;
+                    localStorage.setItem('prodAuthToken', authToken);
+                    showResponse(`✅ Login successful!\nUser: ${data.data.email}\nToken: ${authToken.substring(0, 50)}...`, 'success');
+                    updateAuthStatus();
+                } else {
+                    showResponse(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResponse(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function register() {
+            const email = document.getElementById('registerEmail').value;
+            
+            if (!email) {
+                showResponse('Please enter an email address', 'error');
+                return;
+            }
+            
+            showResponse('Sending registration OTP...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/user/auth/userRegister`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userEmail: email })
+                });
+                
+                const data = await response.json();
+                showResponse(`Registration Response:\n${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`❌ Registration error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAPI(endpoint) {
+            showResponse(`Testing ${endpoint}...`, 'info');
+            
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (authToken && !endpoint.includes('/health')) {
+                    headers['x-access-token'] = authToken;
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                const data = await response.json();
+                const responseText = `Status: ${response.status} ${response.statusText}
+Endpoint: ${endpoint}
+Response:
+${JSON.stringify(data, null, 2)}`;
+                
+                showResponse(responseText, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`❌ Error testing ${endpoint}: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUserAPI(endpoint) {
+            if (!authToken) {
+                showResponse('Please login first to test user APIs', 'error');
+                return;
+            }
+            await testAPI(endpoint);
+        }
+        
+        async function testCreatePost() {
+            if (!authToken) {
+                showResponse('Please login first to test premium APIs', 'error');
+                return;
+            }
+            
+            const title = prompt('Enter post title:', 'Production Test Post');
+            const content = prompt('Enter post content:', 'This is a test post from production testing');
+            
+            if (!title) return;
+            
+            showResponse('Creating post...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/createPost`, {
+                    method: 'POST',
+                    headers: {
+                        'x-access-token': authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        postTitle: title,
+                        postContent: content || 'No content provided'
+                    })
+                });
+                
+                const data = await response.json();
+                const responseText = `Status: ${response.status} ${response.statusText}
+Endpoint: POST /ai/createPost
+Response:
+${JSON.stringify(data, null, 2)}`;
+                
+                showResponse(responseText, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`❌ Create post error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUpdateContext() {
+            if (!authToken) {
+                showResponse('Please login first to test premium APIs', 'error');
+                return;
+            }
+            
+            const context = prompt('Enter user context:', 'I am testing the production API from the testing interface');
+            
+            if (!context) return;
+            
+            showResponse('Updating context...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/updateContext`, {
+                    method: 'POST',
+                    headers: {
+                        'x-access-token': authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        additional_context: context
+                    })
+                });
+                
+                const data = await response.json();
+                const responseText = `Status: ${response.status} ${response.statusText}
+Endpoint: POST /ai/updateContext
+Response:
+${JSON.stringify(data, null, 2)}`;
+                
+                showResponse(responseText, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`❌ Update context error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCreateTask() {
+            if (!authToken) {
+                showResponse('Please login first to test premium APIs', 'error');
+                return;
+            }
+            
+            const taskName = prompt('Enter task name:', 'Production Test Task');
+            const taskDescription = prompt('Enter task description:', 'This is a test task created from production testing');
+            
+            if (!taskName) return;
+            
+            showResponse('Creating task...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/createTask`, {
+                    method: 'POST',
+                    headers: {
+                        'x-access-token': authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        taskName: taskName,
+                        taskDescription: taskDescription || 'No description provided',
+                        scheduledDate: '2025-09-06',
+                        scheduledTime: '15:30:00'
+                    })
+                });
+                
+                const data = await response.json();
+                const responseText = `Status: ${response.status} ${response.statusText}
+Endpoint: POST /ai/createTask
+Response:
+${JSON.stringify(data, null, 2)}`;
+                
+                showResponse(responseText, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResponse(`❌ Create task error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showResponse(message, type = 'info') {
+            const responseDiv = document.getElementById('apiResponse');
+            responseDiv.textContent = message;
+            responseDiv.className = `response-area ${type}`;
+        }
+    </script>
+</body>
+</html>
