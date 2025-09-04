@@ -54,7 +54,7 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
-    if (NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production') {
       // In production, specify allowed origins
       const allowedOrigins = process.env.CORS_ORIGIN ?
         process.env.CORS_ORIGIN.split(',') :

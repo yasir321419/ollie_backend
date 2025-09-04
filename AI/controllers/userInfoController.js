@@ -293,10 +293,10 @@ const getBlogContent = async (req, res, next) => {
 const getLatestEvents = async (req, res, next) => {
   try {
     const { limit = 5, type = 'future' } = req.query;
-    
+
     let whereClause = {};
     let orderBy = {};
-    
+
     switch (type) {
       case 'future':
         whereClause = {
@@ -608,7 +608,7 @@ const getUserRequestInfo = async (req, res, next) => {
         location: `${user.city || ''}, ${user.country || ''}`.trim(),
         joinedAt: user.createdAt
       },
-      
+
       helpRequestsMade: postRequests.map(post => ({
         id: post.id,
         description: post.description,
@@ -845,7 +845,7 @@ const getUserChatRooms = async (req, res, next) => {
 
     // Get chat room participants for this user (simplified query)
     const chatRoomParticipants = await prisma.chatRoomParticipant.findMany({
-      where: { 
+      where: {
         userIds: {
           array_contains: userId
         }
@@ -896,7 +896,7 @@ const getUserChatRooms = async (req, res, next) => {
           sender: {
             type: 'user',
             id: msg.senderId,
-            name: msg.sender ? 
+            name: msg.sender ?
               `${msg.sender.firstName || ''} ${msg.sender.lastName || ''}`.trim() || msg.sender.email :
               'Unknown User'
           }
@@ -939,7 +939,7 @@ const createUserPost = async (req, res, next) => {
 
     // Get the first available category
     const defaultCategory = await prisma.interest.findFirst();
-    
+
     if (!defaultCategory) {
       throw new BadRequestError("No categories available. Please contact administrator.");
     }
@@ -983,7 +983,7 @@ const createHelpRequest = async (req, res, next) => {
     const parsedLatitude = latitude ? parseFloat(latitude) : 0.0;
     const parsedLongitude = longitude ? parseFloat(longitude) : 0.0;
 
-    const validCategoryIds = categoryIds 
+    const validCategoryIds = categoryIds
       ? (Array.isArray(categoryIds) ? categoryIds : [categoryIds])
       : [];
 
@@ -1079,7 +1079,7 @@ const getChatRoomDetails = async (req, res, next) => {
       image: chatRoom.image,
       createdAt: chatRoom.createdAt,
       updatedAt: chatRoom.updatedAt,
-      
+
       participants: [{
         type: 'user',
         id: userId,
@@ -1097,8 +1097,8 @@ const getChatRoomDetails = async (req, res, next) => {
         sender: {
           type: 'user',
           id: msg.senderId,
-          name: msg.sender ? 
-            `${msg.sender.firstName || ''} ${msg.sender.lastName || ''}`.trim() || msg.sender.email : 
+          name: msg.sender ?
+            `${msg.sender.firstName || ''} ${msg.sender.lastName || ''}`.trim() || msg.sender.email :
             'Unknown User',
           image: msg.sender?.image || null
         }
