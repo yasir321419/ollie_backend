@@ -11,7 +11,8 @@ const dbConnect = require('./db/connectivity');
 const socketIo = require("socket.io");
 const http = require("http");
 const server = http.createServer(app);
-
+const rateLimit = require('express-rate-limit');
+const { WebSocketServer } = require('ws');
 const io = socketIo(server, {
   cors: {
     origin: process.env.CORS_ORIGIN || "*",
@@ -32,12 +33,12 @@ app.use(morgan('dev'));
 app.use(cors({ origin: '*' }));
 
 // Logging middleware
-app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Global rate limiting for all endpoints
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: NODE_ENV === 'production' ? 1000 : 10000, // Limit each IP
+  max: process.env.NODE_ENV === 'production' ? 1000 : 10000, // Limit each IP
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later."
@@ -89,7 +90,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.disable('x-powered-by');
 
 // AI request logging (only in development or when specifically enabled)
-if (NODE_ENV === 'development' || process.env.AI_DEBUG_LOGGING === 'true') {
+if (process.env.NODE_ENV === 'development' || process.env.AI_DEBUG_LOGGING === 'true') {
   app.use((req, res, next) => {
     if (req.path.startsWith(API_PREFIX + '/ai/')) {
       console.log(`🤖 AI API Call: ${req.method} ${req.path}`);
