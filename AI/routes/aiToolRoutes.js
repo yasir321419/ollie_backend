@@ -156,4 +156,28 @@ router.get(
   }
 );
 
+// POST versions for ElevenLabs ConvAI compatibility (ElevenLabs sends POST to all webhook endpoints)
+router.post("/getUserInfo", aiLimiter, verifyUserToken, aiToolController.getUserInfo);
+router.post("/getUserTasks", aiLimiter, verifyUserToken, aiToolController.getUserTasks);
+router.post("/getBlogTitles", aiLimiter, verifyUserToken, aiToolController.getBlogTitles);
+router.post("/getLatestBlogs", aiLimiter, verifyUserToken, aiToolController.getLatestBlogs);
+router.post("/getLatestEvents", aiLimiter, verifyUserToken, aiToolController.getLatestEvents);
+router.post("/getUserSocialInfo", aiLimiter, verifyUserToken, aiToolController.getUserSocialInfo);
+router.post("/getUserRequestInfo", aiLimiter, verifyUserToken, aiToolController.getUserRequestInfo);
+router.post("/getUserFinancialInfo", limiter, verifyUserToken, aiToolController.getUserFinancialInfo);
+router.post("/getUserChatRooms", limiter, verifyUserToken, aiToolController.getUserChatRooms);
+
+// POST health endpoint for ElevenLabs compatibility
+router.post(
+  "/health",
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "AI services are healthy",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  }
+);
+
 module.exports = router;
