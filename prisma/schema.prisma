@@ -148,6 +148,7 @@ model UserPost {
   id         String          @id @default(uuid())
   title      String
   content    String @db.LongText
+  content    String          @db.Text  // Blog post content - needs large storage
   categoryId String
   image      String?
   userId     String
@@ -200,7 +201,7 @@ model UserPostLike {
 
 model UserPostComment {
   id         String        @id @default(uuid())
-  comment    String
+  comment    String        @db.Text  // User comment content - needs large storage
   userId     String
   postId     String
   parentId   String?       // for nested replies
@@ -216,7 +217,7 @@ model UserPostComment {
 
 model PostComment {
   id         String        @id @default(uuid())
-  comment    String
+  comment    String        @db.Text  // Post comment content - needs large storage
   userId     String
   postId     String
   parentId   String?       // for nested replies
@@ -234,7 +235,7 @@ model PostComment {
 
 model Comment {
   id         String        @id @default(uuid())
-  comment    String
+  comment    String        @db.Text  // Blog comment content - needs large storage
   userId     String
   blogId     String
   parentId   String?       // for nested replies
@@ -335,6 +336,7 @@ model User {
   userType               userType?
   notificationOnAndOff   Boolean  @default(false)
   emergencyContactNumber String?
+  additional_context     String?  @db.Text // AI context for personalized responses (up to 65K chars)
   wantDailySupplement    Boolean  @default(false)
   wantDailyActivities    Boolean  @default(false)
   createdAt              DateTime @default(now())
@@ -395,7 +397,7 @@ model Otp {
 model Task {
   id              String      @id @default(uuid())
   taskName        String
-  taskDescription String?
+  taskDescription String?   @db.Text  // Task descriptions can be detailed
   scheduledDate     DateTime
   scheduledTime   String
   userId          String
@@ -425,6 +427,7 @@ model PostRequest {
   id           String                   @id @default(uuid())
   scheduledAt  DateTime
   description  String @db.LongText
+  description  String        @db.Text  // Help request descriptions can be detailed
   latitude     Float
   longitude    Float
   status       PostRequestStatus     @default(NoRequest)
@@ -497,7 +500,7 @@ model ChatRoomParticipant {
 
 model Message {
   id             String    @id @default(uuid())
-  content        String?
+  content        String?   @db.Text  // Chat message content - needs large storage
   attachmentUrl  String?
   attachmentType String?
   chatRoomId     String
@@ -688,8 +691,8 @@ model Notification {
   id            String      @id @default(uuid())
   userId        String
   user          User     @relation(fields: [userId], references: [id])
-  title        String
-  description  String
+  title        String        @db.Text  // Notification titles can be descriptive
+  description  String        @db.Text  // Notification content - needs large storage
   isRead       Boolean   @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

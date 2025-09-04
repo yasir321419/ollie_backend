@@ -102,6 +102,12 @@ userAuthRouter.post(
   verifyUserToken,
   validateRequest(submitFeedBackSchema),
   userAuthController.submitFeedBack
+)
+userAuthRouter.get(
+  "/getUserContext",
+  limiter,
+  verifyUserToken,
+  userAuthController.getUserContext
 );
 
 
