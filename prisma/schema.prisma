@@ -56,8 +56,6 @@ enum PostRequestStatus {
   TaskCompleted
 }
 
-
-
 enum ChatRoomType {
   ONE_TO_ONE
   GROUP
@@ -68,25 +66,24 @@ enum TransactionType {
   CONNECT_PURCHASE
 }
 
-
 model Admin {
-  id             String      @id @default(uuid())
-  email          String   @unique
-  password       String?
-  name           String?
-  deviceToken    String?
-  otp            String?
-  userType       userType?
-  image          String ?
+  id                    String                @id @default(uuid())
+  email                 String                @unique
+  password              String?
+  name                  String?
+  deviceToken           String?
+  otp                   String?
+  userType              userType?
+  image                 String?
   // One-to-many relations
-  blogs          Blog[]
-  interests      Interest[]
+  blogs                 Blog[]
+  interests             Interest[]
   postRequestCategories PostRequestCategory[]
   // BlogCategory   BlogCategory[]
-  Event          Event[]
-  PrivacyPolicy  PrivacyPolicy[]
-  TermsCondition TermsCondition[]
-  Question       Question[]
+  Event                 Event[]
+  PrivacyPolicy         PrivacyPolicy[]
+  TermsCondition        TermsCondition[]
+  Question              Question[]
 
   // Chat rooms this admin created
   createdChatRooms ChatRoom[] @relation("AdminChatRooms")
@@ -100,67 +97,64 @@ model Admin {
 
   Post Post[]
 
-  createdAt DateTime @default(now())   // ← add
-  updatedAt DateTime @updatedAt  
+  createdAt DateTime @default(now()) // ← add
+  updatedAt DateTime @updatedAt
 }
 
-
 model Blog {
-  id         String          @id @default(uuid())
+  id         String    @id @default(uuid())
   title      String
-  content    String @db.LongText
+  content    String    @db.LongText
   image      String?
   categoryId String
   adminId    String
   type       BlogType?
-  views        Int           @default(0) // 👈 Add this line
+  views      Int       @default(0) // 👈 Add this line
 
-  category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  admin      Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  likes      Like[]
-  comments   Comment[]
+  category     Interest    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  admin        Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  likes        Like[]
+  comments     Comment[]
   savedByUsers SavedBlog[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model Post {
-  id         String          @id @default(uuid())
-  title      String
-  content    String @db.LongText
-  image      String?
-  categoryId String
-  adminId    String
-  type       BlogType?
+  id           String        @id @default(uuid())
+  title        String
+  content      String        @db.LongText
+  image        String?
+  categoryId   String
+  adminId      String
+  type         BlogType?
   views        Int           @default(0) // 👈 Add this line
-  isReport    Boolean     @default(false)
-  category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  admin      Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  isReport     Boolean       @default(false)
+  category     Interest      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  admin        Admin         @relation(fields: [adminId], references: [id], onDelete: Cascade)
   // postlikes      PostLike[]
-  postcomments   PostComment[]
+  postcomments PostComment[]
   savedByUsers SavedBlog[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   PostLike PostLike[]
 }
 
-
-
 model UserPost {
-  id         String          @id @default(uuid())
-  title      String
-  content    String @db.LongText
-  categoryId String
-  image      String?
-  userId     String
-  views      Int           @default(0) // 👈 Add this line  
-  isReport    Boolean     @default(false)
-  category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userpostlikes      UserPostLike[]
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  id            String         @id @default(uuid())
+  title         String
+  content       String         @db.LongText
+  categoryId    String
+  image         String?
+  userId        String
+  views         Int            @default(0) // 👈 Add this line  
+  isReport      Boolean        @default(false)
+  category      Interest       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userpostlikes UserPostLike[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   savedByUsers SavedBlog[]
 
@@ -168,160 +162,151 @@ model UserPost {
 }
 
 model Like {
-  id      String   @id @default(uuid())
-  userId  String
-  blogId  String
+  id     String @id @default(uuid())
+  userId String
+  blogId String
 
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  blog    Blog  @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
 
   @@unique([userId, blogId]) // prevents a user from liking the same blog multiple times
-   @@map("likes") 
-} 
+  @@map("likes")
+}
 
 model PostLike {
-  id      String   @id @default(uuid())
-  userId  String
-  postId  String
+  id     String @id @default(uuid())
+  userId String
+  postId String
 
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post    Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId]) // prevents a user from liking the same blog multiple times
-} 
+}
 
 model UserPostLike {
-  id      String   @id @default(uuid())
-  userId  String
-  postId  String
+  id     String @id @default(uuid())
+  userId String
+  postId String
 
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post    UserPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post UserPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId]) // prevents a user from liking the same blog multiple times
 }
 
 model UserPostComment {
-  id         String        @id @default(uuid())
-  comment    String        @db.Text  // User comment content - needs large storage
-  userId     String
-  postId     String
-  parentId   String?       // for nested replies
-  createdAt  DateTime   @default(now())
+  id        String   @id @default(uuid())
+  comment   String   @db.Text // User comment content - needs large storage
+  userId    String
+  postId    String
+  parentId  String? // for nested replies
+  createdAt DateTime @default(now())
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userpost       UserPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent     UserPostComment?   @relation("CommentReplies", fields: [parentId], references: [id])
-  replies    UserPostComment[]  @relation("CommentReplies")  // 💬 Nested replies
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userpost UserPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   UserPostComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  UserPostComment[] @relation("CommentReplies") // 💬 Nested replies
 
   UserPostCommentLike UserPostCommentLike[]
 }
 
 model PostComment {
-  id         String        @id @default(uuid())
-  comment    String        @db.Text  // Post comment content - needs large storage
-  userId     String
-  postId     String
-  parentId   String?       // for nested replies
-  createdAt  DateTime   @default(now())
+  id        String   @id @default(uuid())
+  comment   String   @db.Text // Post comment content - needs large storage
+  userId    String
+  postId    String
+  parentId  String? // for nested replies
+  createdAt DateTime @default(now())
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userpost   Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent     PostComment?   @relation("CommentReplies", fields: [parentId], references: [id])
-  replies    PostComment[]  @relation("CommentReplies")  // 💬 Nested replies
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userpost Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent   PostComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  PostComment[] @relation("CommentReplies") // 💬 Nested replies
 
   PostCommentLike PostCommentLike[]
 }
 
-
-
 model Comment {
-  id         String        @id @default(uuid())
-  comment    String        @db.Text  // Blog comment content - needs large storage
-  userId     String
-  blogId     String
-  parentId   String?       // for nested replies
-  createdAt  DateTime   @default(now())
+  id        String   @id @default(uuid())
+  comment   String   @db.Text // Blog comment content - needs large storage
+  userId    String
+  blogId    String
+  parentId  String? // for nested replies
+  createdAt DateTime @default(now())
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  blog       Blog       @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  parent     Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
-  replies    Comment[]  @relation("CommentReplies")  // 💬 Nested replies
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blog    Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies") // 💬 Nested replies
 
-  likes      CommentLike[]
+  likes CommentLike[]
 }
 
-
-
 model CommentLike {
-  id         String     @id @default(uuid())
-  commentId  String
-  userId     String
+  id        String @id @default(uuid())
+  commentId String
+  userId    String
 
-  comment    Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId]) // prevent duplicate likes
 }
 
 model UserPostCommentLike {
-  id         String     @id @default(uuid())
-  commentId  String
-  userId     String
+  id        String @id @default(uuid())
+  commentId String
+  userId    String
 
-  userpostcomment    UserPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userpostcomment UserPostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId]) // prevent duplicate likes
 }
 
 model PostCommentLike {
-  id         String     @id @default(uuid())
-  commentId  String
-  userId     String
+  id        String @id @default(uuid())
+  commentId String
+  userId    String
 
-  postcomment    PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postcomment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([commentId, userId]) // prevent duplicate likes
 }
 
-
-
 model SavedBlog {
-  id           String        @id @default(uuid())
-  userId       String
-  userPostId   String?       // Nullable for user-created posts
-  adminPostId  String?
-  PostId  String?        // Nullable for admin-created posts
-  postType     PostType
+  id          String   @id @default(uuid())
+  userId      String
+  userPostId  String? // Nullable for user-created posts
+  adminPostId String?
+  PostId      String? // Nullable for admin-created posts
+  postType    PostType
 
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userPost     UserPost?  @relation(fields: [userPostId], references: [id], onDelete: Cascade)
-  adminPost    Blog?      @relation(fields: [adminPostId], references: [id], onDelete: Cascade)
-  post        Post?      @relation(fields: [PostId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userPost  UserPost? @relation(fields: [userPostId], references: [id], onDelete: Cascade)
+  adminPost Blog?     @relation(fields: [adminPostId], references: [id], onDelete: Cascade)
+  post      Post?     @relation(fields: [PostId], references: [id], onDelete: Cascade)
+
   @@unique([userId, userPostId])
   @@unique([userId, adminPostId])
 }
 
-
-
-
 model SavedTopic {
-  id      String  @id @default(uuid())
+  id      String @id @default(uuid())
   userId  String
   topicId String
 
-  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  blogcategory    Interest @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blogcategory Interest @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([userId, topicId]) // Prevent duplicate saves
 }
 
-
 model User {
-  id                     String   @id @default(uuid())
-  email                  String   @unique
+  id                     String      @id @default(uuid())
+  email                  String      @unique
   password               String?
   phoneNumber            String?
   firstName              String?
@@ -330,46 +315,46 @@ model User {
   gender                 String?
   deviceType             deviceType?
   deviceToken            String?
-  isCreatedProfile       Boolean  @default(false)
+  isCreatedProfile       Boolean     @default(false)
   image                  String?
   city                   String?
   country                String?
   states                 String?
   userType               userType?
-  notificationOnAndOff   Boolean  @default(false)
+  notificationOnAndOff   Boolean     @default(false)
   emergencyContactNumber String?
-  additional_context     String?  @db.Text // AI context for personalized responses (up to 65K chars)
-  wantDailySupplement    Boolean  @default(false)
-  wantDailyActivities    Boolean  @default(false)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  showAds                Boolean  @default(true)
+  additional_context     String?     @db.Text // AI context for personalized responses (up to 65K chars)
+  wantDailySupplement    Boolean     @default(false)
+  wantDailyActivities    Boolean     @default(false)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  showAds                Boolean     @default(true)
 
   // Relations
-  tasks                  Task[]
-  likes                  Like[]
-  comments               Comment[]
-  savedBlogs             SavedBlog[]
-  savedTopics            SavedTopic[]
-  interests              Interest[] @relation("UserInterests")
-  postRequestCategories  PostRequestCategory[] @relation("UserPostRequestCategories")
-  postRequests           PostRequest[]
-  volunteerRequests      VolunteerRequest[]  @relation("VolunteerUser")
-  commentLikes           CommentLike[]
+  tasks                 Task[]
+  likes                 Like[]
+  comments              Comment[]
+  savedBlogs            SavedBlog[]
+  savedTopics           SavedTopic[]
+  interests             Interest[]            @relation("UserInterests")
+  postRequestCategories PostRequestCategory[] @relation("UserPostRequestCategories")
+  postRequests          PostRequest[]
+  volunteerRequests     VolunteerRequest[]    @relation("VolunteerUser")
+  commentLikes          CommentLike[]
   // messages are exposed via Message.sender (below)
-  createdChatRooms       ChatRoom[] @relation("UserChatRooms")
-  UserPost               UserPost[]
-  UserPostLike           UserPostLike[]
-  UserPostComment        UserPostComment[]
-  UserPostCommentLike    UserPostCommentLike[]
-  eventParticipants      EventParticipant[]
-  Message                Message[] @relation("UserSender")
-  UserSubscription       UserSubscription[]
-  ConnectPurchase        ConnectPurchase[]
-  Wallet                 Wallet[]
-  Credit                 Credit[]
-  Donation               Donation[]
-  Notification           Notification[]
+  createdChatRooms      ChatRoom[]            @relation("UserChatRooms")
+  UserPost              UserPost[]
+  UserPostLike          UserPostLike[]
+  UserPostComment       UserPostComment[]
+  UserPostCommentLike   UserPostCommentLike[]
+  eventParticipants     EventParticipant[]
+  Message               Message[]             @relation("UserSender")
+  UserSubscription      UserSubscription[]
+  ConnectPurchase       ConnectPurchase[]
+  Wallet                Wallet[]
+  Credit                Credit[]
+  Donation              Donation[]
+  Notification          Notification[]
 
   // ❌ Removed: ChatRoom ChatRoom[]
   // ❌ Keep ChatRoomParticipant as JSON-only table without relations
@@ -383,24 +368,22 @@ model User {
   PostCommentLike PostCommentLike[]
 }
 
-
 model Otp {
-  id         String       @id @default(uuid())
-  otp        String    @unique
-  email      String? 
-  otpReason  otpReason
-  expiresAt  DateTime
-  otpUsed    Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  otp       String    @unique
+  email     String?
+  otpReason otpReason
+  expiresAt DateTime
+  otpUsed   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
-
 model Task {
-  id              String      @id @default(uuid())
+  id              String   @id @default(uuid())
   taskName        String
-  taskDescription String?   @db.Text  // Task descriptions can be detailed
-  scheduledDate     DateTime
+  taskDescription String?  @db.Text // Task descriptions can be detailed
+  scheduledDate   DateTime
   scheduledTime   String
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -410,11 +393,11 @@ model Task {
 }
 
 model Interest {
-  id       String     @id @default(uuid())
-  name     String  @unique
-  users    User[]  @relation("UserInterests")  // many-to-many with users
-  adminId  String?    // optional admin reference
-  admin    Admin?  @relation(fields: [adminId], references: [id]) // Admin who created this interest
+  id      String  @id @default(uuid())
+  name    String  @unique
+  users   User[]  @relation("UserInterests") // many-to-many with users
+  adminId String? // optional admin reference
+  admin   Admin?  @relation(fields: [adminId], references: [id]) // Admin who created this interest
 
   Blog Blog[]
 
@@ -426,285 +409,274 @@ model Interest {
 }
 
 model PostRequest {
-  id           String                   @id @default(uuid())
-  scheduledAt  DateTime
-  description  String @db.LongText
-  latitude     Float
-  longitude    Float
-  status       PostRequestStatus     @default(NoRequest)
-  userId       String
-  user         User                  @relation(fields: [userId], references: [id])
-  categories   PostRequestCategory[] @relation("PostRequestToCategories")
+  id                String                @id @default(uuid())
+  scheduledAt       DateTime
+  description       String                @db.LongText
+  latitude          Float
+  longitude         Float
+  status            PostRequestStatus     @default(NoRequest)
+  userId            String
+  user              User                  @relation(fields: [userId], references: [id])
+  categories        PostRequestCategory[] @relation("PostRequestToCategories")
   volunteerRequests VolunteerRequest[]
 }
 
-
 model PostRequestCategory {
-  id       String              @id @default(uuid())
-  name     String           @unique
-  users    User[]           @relation("UserPostRequestCategories")
-  adminId  String?
-  admin    Admin?           @relation(fields: [adminId], references: [id])
-  posts    PostRequest[]    @relation("PostRequestToCategories")
+  id      String        @id @default(uuid())
+  name    String        @unique
+  users   User[]        @relation("UserPostRequestCategories")
+  adminId String?
+  admin   Admin?        @relation(fields: [adminId], references: [id])
+  posts   PostRequest[] @relation("PostRequestToCategories")
 }
 
 // VolunteerRequest Model
 model VolunteerRequest {
-  id           String                      @id @default(uuid())
-  postId       String
-  post         PostRequest              @relation(fields: [postId], references: [id])
-  volunteerId  String
-  volunteer    User                     @relation("VolunteerUser", fields: [volunteerId], references: [id])
-  status       VolunteerRequestStatus   @default(VolunteerRequestSent)
-  createdAt    DateTime                 @default(now())
+  id          String                 @id @default(uuid())
+  postId      String
+  post        PostRequest            @relation(fields: [postId], references: [id])
+  volunteerId String
+  volunteer   User                   @relation("VolunteerUser", fields: [volunteerId], references: [id])
+  status      VolunteerRequestStatus @default(VolunteerRequestSent)
+  createdAt   DateTime               @default(now())
 
   @@unique([postId, volunteerId])
 }
 
 model ChatRoom {
-  id                String                   @id @default(uuid())
-  type              String                // Either "GROUP" or "ONE_TO_ONE"
-  name              String?               // Optional, should be available for GROUP chat
-  description       String? @db.LongText
-  image             String?
-  creatorId         String
-  creatorType       String
-  oneToOneKey       String?   @unique            // Only for ONE_TO_ONE chat type
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id          String   @id @default(uuid())
+  type        String // Either "GROUP" or "ONE_TO_ONE"
+  name        String? // Optional, should be available for GROUP chat
+  description String?  @db.LongText
+  image       String?
+  creatorId   String
+  creatorType String
+  oneToOneKey String?  @unique // Only for ONE_TO_ONE chat type
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   chatRoomParticipants ChatRoomParticipant[]
-  messages            Message[]
-  creator             User                 @relation(fields: [creatorId], references: [id])
+  messages             Message[]
+  creator              User                  @relation(fields: [creatorId], references: [id])
 
   User User[] @relation("UserChatRooms")
 
   Admin Admin[] @relation("AdminChatRooms")
 }
 
-
 model ChatRoomParticipant {
   id         String   @id @default(uuid())
-  chatRoomId String @unique
+  chatRoomId String   @unique
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
 
-  userIds    Json
-  adminIds   Json
+  userIds  Json
+  adminIds Json
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([chatRoomId])
 }
 
-
-
 model Message {
-  id             String    @id @default(uuid())
-  content        String?   @db.Text  // Chat message content - needs large storage
+  id             String   @id @default(uuid())
+  content        String?  @db.Text // Chat message content - needs large storage
   attachmentUrl  String?
   attachmentType String?
   chatRoomId     String
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime @default(now())
   senderId       String?
   adminSenderId  String?
 
-  chatRoom       ChatRoom  @relation(fields: [chatRoomId], references: [id])
-  sender         User?     @relation("UserSender",  fields: [senderId],     references: [id])
-  adminSender    Admin?    @relation("AdminSender", fields: [adminSenderId], references: [id])
+  chatRoom    ChatRoom @relation(fields: [chatRoomId], references: [id])
+  sender      User?    @relation("UserSender", fields: [senderId], references: [id])
+  adminSender Admin?   @relation("AdminSender", fields: [adminSenderId], references: [id])
 
   // ❌ Removed stray: User User[]
 }
 
-
-
-
 model Event {
-  id                 String                 @id @default(uuid())
-  eventName          String
-  eventDescription   String @db.LongText
-  eventDateAndTime   DateTime
-  eventAddress       String
-  eventStates        String
-  eventCity          String
-  eventCountry       String
-  eventParticipant   Int                 @default(0)
-  image              String?
+  id               String   @id @default(uuid())
+  eventName        String
+  eventDescription String   @db.LongText
+  eventDateAndTime DateTime
+  eventAddress     String
+  eventStates      String
+  eventCity        String
+  eventCountry     String
+  eventParticipant Int      @default(0)
+  image            String?
 
-  createdById        String
-  createdBy          Admin               @relation(fields: [createdById], references: [id])
+  createdById String
+  createdBy   Admin  @relation(fields: [createdById], references: [id])
 
   // ✅ Relationship to EventParticipant
-  eventParticipants  EventParticipant[]
+  eventParticipants EventParticipant[]
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime?           @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model EventParticipant {
-  id        String      @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  event     Event    @relation(fields: [eventId], references: [id])
-  eventId   String
-  markedAt  DateTime @default(now())
-    isMark             Boolean @default(false)
+  id       String   @id @default(uuid())
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String
+  event    Event    @relation(fields: [eventId], references: [id])
+  eventId  String
+  markedAt DateTime @default(now())
+  isMark   Boolean  @default(false)
 
   @@unique([userId, eventId]) // ✅ Prevents duplicate "going" marks
 }
 
-
 model PrivacyPolicy {
-  id                 String                 @id @default(uuid())
-  privacyPolicy      String
+  id            String @id @default(uuid())
+  privacyPolicy String
 
-  createdById        String
-  createdBy          Admin               @relation(fields: [createdById], references: [id])
+  createdById String
+  createdBy   Admin  @relation(fields: [createdById], references: [id])
 
   // ✅ Relationship to EventParticipant
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime?           @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
 model TermsCondition {
-  id                 String                 @id @default(uuid())
-  TermsCondition      String
+  id             String @id @default(uuid())
+  TermsCondition String
 
-  createdById        String
-  createdBy          Admin               @relation(fields: [createdById], references: [id])
+  createdById String
+  createdBy   Admin  @relation(fields: [createdById], references: [id])
 
   // ✅ Relationship to EventParticipant
 
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime?           @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 }
 
-  model Question {
-    id                 String                 @id @default(uuid())
-    question  String
-      isActive   Boolean   @default(true)
+model Question {
+  id       String  @id @default(uuid())
+  question String
+  isActive Boolean @default(true)
 
-    createdById        String
-    createdBy          Admin               @relation(fields: [createdById], references: [id])
+  createdById String
+  createdBy   Admin  @relation(fields: [createdById], references: [id])
 
-    // ✅ Relationship to EventParticipant
+  // ✅ Relationship to EventParticipant
 
-    createdAt          DateTime            @default(now())
-    updatedAt          DateTime?           @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 
-    Option Option[]
-  }
+  Option Option[]
+}
 
-
-  model Option {
-    id          String      @id @default(uuid())
-    text        String
-    isCorrect   Boolean  @default(false) // Only one should be true
-    questionId  String
-    question    Question @relation(fields: [questionId], references: [id])
-  }
+model Option {
+  id         String   @id @default(uuid())
+  text       String
+  isCorrect  Boolean  @default(false) // Only one should be true
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+}
 
 // Subscription Plan (Free, Basic, Advance)
 model SubscriptionPlan {
-  id          String      @id @default(uuid())
-  name        String   @unique       // Free, Basic, Advance
-  price       Float                   // e.g., 0.0 for Free
-  duration    Int                     // in days
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String   @unique // Free, Basic, Advance
+  price     Float // e.g., 0.0 for Free
+  duration  Int // in days
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   subscriptions UserSubscription[]
 }
 
 // User Subscription History
 model UserSubscription {
-  id                 String               @id @default(uuid())
+  id                 String   @id @default(uuid())
   userId             String
   subscriptionPlanId String
-  startDate          DateTime          @default(now())
+  startDate          DateTime @default(now())
   endDate            DateTime
-  isActive           Boolean           @default(true)
+  isActive           Boolean  @default(true)
 
-  user               User              @relation(fields: [userId], references: [id])
-  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  user             User             @relation(fields: [userId], references: [id])
+  subscriptionPlan SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
 }
 
 // Connect Purchase Log
 model ConnectPurchase {
-  id        String      @id @default(uuid())
-  userId    String      @unique
+  id        String   @id @default(uuid())
+  userId    String   @unique
   quantity  Int
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 // Wallet for each user
 model Wallet {
-  id            String                 @id @default(uuid())
-  userId        String                @unique
-  balance       Float              @default(0.0)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Float    @default(0.0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user          User               @relation(fields: [userId], references: [id])
-  transactions  WalletTransaction[]
+  user         User                @relation(fields: [userId], references: [id])
+  transactions WalletTransaction[]
 }
 
 // Wallet Transaction Log
 model WalletTransaction {
-  id          String             @id @default(uuid())
+  id          String          @id @default(uuid())
   walletId    String
-  amount      Float           // Negative for debits, positive for credits
+  amount      Float // Negative for debits, positive for credits
   type        TransactionType
   description String?
   createdAt   DateTime        @default(now())
 
-  wallet      Wallet          @relation(fields: [walletId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
 }
 
 model Credit {
-  id           String      @id @default(uuid())
-  credit       String
-  amount       Float
-  createdAt    DateTime @default(now())
-  isClaimed    Boolean  @default(false)
+  id        String   @id @default(uuid())
+  credit    String
+  amount    Float
+  createdAt DateTime @default(now())
+  isClaimed Boolean  @default(false)
 
-  createdBy    Admin    @relation(fields: [createdById], references: [id])
-  createdById  String
+  createdBy   Admin  @relation(fields: [createdById], references: [id])
+  createdById String
 
-  user         User?    @relation(fields: [userId], references: [id])
-  userId       String?
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
 }
 
 model Donation {
-  id            String      @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  amount        Float
-  currency      String   @default("USD") // Can be used for internationalization
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  currency  String   @default("USD") // Can be used for internationalization
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Notification {
-  id            String      @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  title        String        @db.Text  // Notification titles can be descriptive
-  description  String        @db.Text  // Notification content - needs large storage
-  isRead       Boolean   @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String   @db.Text // Notification titles can be descriptive
+  description String   @db.Text // Notification content - needs large storage
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model FeedBack{
-    id            String      @id @default(uuid())
-  message   String @db.LongText  
-  email    String 
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
-  }
-
-
+model FeedBack {
+  id        String   @id @default(uuid())
+  message   String   @db.LongText
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
