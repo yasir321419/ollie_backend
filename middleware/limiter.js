@@ -2,6 +2,10 @@ const rateLimit = require("express-rate-limit");
 
 // Standard rate limiter for regular endpoints
 const limiter = rateLimit({
+
+  limit: 10,
+  windowMs: 10000,
+
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) || 10 * 60 * 1000, // 10 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100, // Limit each IP
   message: {
@@ -51,6 +55,7 @@ const strictLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+
 });
 
 // For backward compatibility - existing routes expect default export

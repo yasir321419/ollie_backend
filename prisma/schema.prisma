@@ -130,7 +130,7 @@ model Post {
   adminId    String
   type       BlogType?
   views        Int           @default(0) // 👈 Add this line
-
+  isReport    Boolean     @default(false)
   category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   admin      Admin        @relation(fields: [adminId], references: [id], onDelete: Cascade)
   // postlikes      PostLike[]
@@ -147,11 +147,13 @@ model Post {
 model UserPost {
   id         String          @id @default(uuid())
   title      String
+  content    String @db.LongText
   content    String          @db.Text  // Blog post content - needs large storage
   categoryId String
   image      String?
   userId     String
   views      Int           @default(0) // 👈 Add this line  
+  isReport    Boolean     @default(false)
   category   Interest @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   userpostlikes      UserPostLike[]
@@ -380,9 +382,6 @@ model User {
 }
 
 
-
-
-
 model Otp {
   id         String       @id @default(uuid())
   otp        String    @unique
@@ -427,6 +426,7 @@ model Interest {
 model PostRequest {
   id           String                   @id @default(uuid())
   scheduledAt  DateTime
+  description  String @db.LongText
   description  String        @db.Text  // Help request descriptions can be detailed
   latitude     Float
   longitude    Float
@@ -464,7 +464,7 @@ model ChatRoom {
   id                String                   @id @default(uuid())
   type              String                // Either "GROUP" or "ONE_TO_ONE"
   name              String?               // Optional, should be available for GROUP chat
-  description       String?
+  description       String? @db.LongText
   image             String?
   creatorId         String
   creatorType       String
@@ -697,3 +697,13 @@ model Notification {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model FeedBack{
+    id            String      @id @default(uuid())
+  message   String @db.LongText  
+  email    String 
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+  }
+
+

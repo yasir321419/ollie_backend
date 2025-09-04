@@ -14,21 +14,27 @@ const Storage = multer.diskStorage({
 });
 
 const handleMultiPartData = multer({
-  // storage: multer.memoryStorage(),
-  storage: Storage,
+  storage: multer.memoryStorage(), // Store files in memory (buffer)
   limits: {
-    fileSize: 30 * 1024 * 1024, // 30 MB in bytes
+    fileSize: 100 * 1024 * 1024, // 100 MB limit in bytes
   },
   fileFilter: (req, file, callback) => {
     const FileTypes =
       /jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|wav|dmg/;
-    const mimType = FileTypes.test(file.mimetype);
-    const extname = FileTypes.test(path.extname(file.originalname));
-    if (extname) {
-      return callback(null, true);
+
+    const mimTypeValid = FileTypes.test(file.mimetype); // Check mimetype
+    const extnameValid = FileTypes.test(path.extname(file.originalname).toLowerCase()); // Check file extension
+
+    // Log file info for debugging (can remove later)
+    console.log(`File Mimetype: ${file.mimetype}, File Extension: ${path.extname(file.originalname)}`);
+
+    if (mimTypeValid && extnameValid) {
+      return callback(null, true); // File is valid
     }
-    return callback(new Error("File type not supported"), false);
+
+    return callback(new Error("File type not supported"), false); // Reject the file
   },
 });
+
 
 module.exports = handleMultiPartData;

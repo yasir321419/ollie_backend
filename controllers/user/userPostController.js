@@ -6,6 +6,8 @@ const checkUserSubscription = require("../../utils/checkSubscription");
 const sendNotification = require("../../utils/notification");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 const createUserPost = async (req, res, next) => {
   try {
@@ -30,12 +32,12 @@ const createUserPost = async (req, res, next) => {
     }
 
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -157,12 +159,12 @@ const updateUserPost = async (req, res, next) => {
     const { postTitle, postContent } = req.body;
     const file = req.file;
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -558,16 +560,22 @@ const likeAndReplyOnComment = async (req, res, next) => {
 };
 
 
+
+
 const showPostCommentLikeReply = async (req, res, next) => {
   try {
-    const { type } = req.params; // Get the type from the URL (either 'posts' or 'user-posts')
-    const isUserPost = type === 'user-posts'; // Check if it's user-posts
+    const { type, postId } = req.body;  // Get type and postId from request body
+    if (!type || !postId) {
+      return res.status(400).json({ message: "Type and postId are required." });
+    }
 
+    const isUserPost = type === 'user-posts'; // Check if it's user-posts
     const commentModel = isUserPost ? prisma.userPostComment : prisma.postComment; // Select the correct model
 
-    // Get top-level comments
+    // Get top-level comments based on postId
     const comments = await commentModel.findMany({
       where: {
+        postId: postId, // Filter comments based on postId
         parentId: null // Get top-level comments (parentId: null)
       },
       include: {
@@ -618,6 +626,7 @@ const showPostCommentLikeReply = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 
@@ -868,6 +877,110 @@ const showAllPostByUserSelectedInterest = async (req, res, next) => {
   }
 };
 
+// const userReportPost = async (req, res, next) => {
+//   try {
+//     const { postId } = req.params;
+//     const { id } = req.user;
+//     const findpost = await prisma.post.findUnique({
+//       where: {
+//         id: postId,
+
+//       }
+//     });
+
+//     const finduserpost = await prisma.userPost.findUnique({
+//       where: {
+//         id: postId,
+
+//       }
+//     });
+
+//     if (findpost) {
+
+//       const reportpost = await prisma.post.update({
+//         where: {
+//           id: findpost.id
+//         },
+//         data: {
+//           isReport: true
+//         }
+//       });
+
+//       handlerOk(res, 200, reportpost, 'user report against the post is successfully',)
+
+//     }
+
+//     if (finduserpost) {
+//       const reportpost = await prisma.userPost.update({
+//         where: {
+//           id: findpost.id,
+//           userId: {
+//             not: {
+//               id
+//             }
+//           }
+//         },
+//         data: {
+//           isReport: true
+//         }
+//       });
+
+//       handlerOk(res, 200, reportpost, 'user report against the post is successfully',)
+//     }
+
+//     throw new NotFoundError("post not found")
+
+//   } catch (error) {
+//     next(error)
+//   }
+// }
+
+const userReportPost = async (req, res, next) => {
+  try {
+    const { postId } = req.params;
+    const { id: userId } = req.user;
+
+    // 1) Try ADMIN-authored Post
+    const adminPost = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, adminId: true }
+    });
+
+    if (adminPost) {
+      if (adminPost.adminId === userId) {
+        throw new ValidationError("You can't report your own post.");
+      }
+      const updated = await prisma.post.update({
+        where: { id: adminPost.id },
+        data: { isReport: true }
+      });
+      return handlerOk(res, 200, updated, 'Reported admin post successfully');
+    }
+
+    // 2) Try USER-authored UserPost
+    const userPost = await prisma.userPost.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true }
+    });
+
+    if (userPost) {
+      if (userPost.userId === userId) {
+        throw new ValidationError("You can't report your own post.");
+      }
+      const updated = await prisma.userPost.update({
+        where: { id: userPost.id },
+        data: { isReport: true }
+      });
+      return handlerOk(res, 200, updated, 'Reported user post successfully');
+    }
+
+    throw new NotFoundError('post not found');
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 
 
@@ -885,5 +998,6 @@ module.exports = {
   updateUserPost,
   deleteUserPost,
   showAllPostByInterest,
-  showAllPostByUserSelectedInterest
+  showAllPostByUserSelectedInterest,
+  userReportPost
 }
