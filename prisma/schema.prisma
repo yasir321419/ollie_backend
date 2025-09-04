@@ -99,6 +99,9 @@ model Admin {
   Credit Credit[]
 
   Post Post[]
+
+  createdAt DateTime @default(now())   // ← add
+  updatedAt DateTime @updatedAt  
 }
 
 
