@@ -99,6 +99,7 @@ model Admin {
 
   createdAt DateTime @default(now()) // ← add
   updatedAt DateTime @updatedAt
+
 }
 
 model Blog {
