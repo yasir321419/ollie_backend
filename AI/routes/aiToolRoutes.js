@@ -4,12 +4,12 @@ const { verifyUserToken } = require("../../middleware/auth");
 const { aiLimiter, limiter } = require("../../middleware/limiter");
 const aiToolController = require("../controllers/userInfoController");
 const validateRequest = require("../../middleware/validateRequest");
-const { 
-  aiCreatePostSchema, 
-  aiUpdateContextSchema, 
-  aiCreateTaskSchema, 
-  aiCreateHelpRequestSchema 
-} = require("../../schema/ai/aiTools");
+// const {
+//   aiCreatePostSchema,
+//   aiUpdateContextSchema,
+//   aiCreateTaskSchema,
+//   aiCreateHelpRequestSchema
+// } = require("../../schema/ai/aiTools");
 
 // Get user information for AI context
 router.get(
@@ -32,7 +32,7 @@ router.post(
   "/createTask",
   aiLimiter,
   verifyUserToken,
-  validateRequest(aiCreateTaskSchema),
+  // validateRequest(aiCreateTaskSchema),
   aiToolController.createUserTask
 );
 
@@ -121,7 +121,7 @@ router.post(
   "/createPost",
   aiLimiter,
   verifyUserToken,
-  validateRequest(aiCreatePostSchema),
+  // validateRequest(aiCreatePostSchema),
   aiToolController.createUserPost
 );
 
@@ -130,7 +130,7 @@ router.post(
   "/createHelpRequest",
   limiter,
   verifyUserToken,
-  validateRequest(aiCreateHelpRequestSchema),
+  // validateRequest(aiCreateHelpRequestSchema),
   aiToolController.createHelpRequest
 );
 
@@ -139,7 +139,7 @@ router.post(
   "/updateContext",
   aiLimiter,
   verifyUserToken,
-  validateRequest(aiUpdateContextSchema),
+  // validateRequest(aiUpdateContextSchema),
   aiToolController.updateUserContext
 );
 

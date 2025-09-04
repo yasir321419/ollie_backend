@@ -148,7 +148,6 @@ model UserPost {
   id         String          @id @default(uuid())
   title      String
   content    String @db.LongText
-  content    String          @db.Text  // Blog post content - needs large storage
   categoryId String
   image      String?
   userId     String
@@ -427,7 +426,6 @@ model PostRequest {
   id           String                   @id @default(uuid())
   scheduledAt  DateTime
   description  String @db.LongText
-  description  String        @db.Text  // Help request descriptions can be detailed
   latitude     Float
   longitude    Float
   status       PostRequestStatus     @default(NoRequest)
