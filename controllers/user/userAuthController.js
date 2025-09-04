@@ -10,6 +10,8 @@ const { genToken } = require("../../utils/generateToken");
 const { hashPassword, comparePassword } = require("../../utils/passwordHashed");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 
 const userRegister = async (req, res, next) => {
@@ -605,48 +607,48 @@ const userEditProfile = async (req, res, next) => {
 
         console.log(file, 'file');
 
-
-        const currentPrifile = await prisma.user.findUnique({
-            where: {
-                id: id
-            }
+        const currentProfile = await prisma.user.findUnique({
+            where: { id: id }
         });
 
-        if (!currentPrifile) {
-            throw new NotFoundError("user not found")
+        if (!currentProfile) {
+            throw new NotFoundError("User not found");
         }
 
-        const updateObj = {}
+        const updateObj = {};
 
-        const filePath = file.path; // Full file path of the uploaded file
-        const folder = 'uploads'; // Or any folder you want to store the image in
-        const filename = file.filename; // The filename of the uploaded file
-        const contentType = file.mimetype; // The MIME type of the file
+        if (file) {
+            // Check if the file exists before attempting to use it
+            const fileBuffer = file.buffer;
+            const folder = 'uploads';
+            const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+            const contentType = file.mimetype;
 
-        const fileBuffer = fs.readFileSync(filePath);
+            const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+            updateObj.image = s3ImageUrl; // Add the image URL to the update object
+        }
 
-        const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
-
+        // Update other fields if provided
         if (userFirstName) {
-            updateObj.firstName = userFirstName
+            updateObj.firstName = userFirstName;
         }
 
         if (userLastName) {
-            updateObj.lastName = userLastName
+            updateObj.lastName = userLastName;
         }
 
         if (userEmail) {
-            updateObj.email = userEmail
+            updateObj.email = userEmail;
         }
 
         if (userPhoneNumber) {
-            updateObj.phoneNumber = userPhoneNumber
+            updateObj.phoneNumber = userPhoneNumber;
         }
 
         if (userDateOfBirth) {
             const isValidDate = /^\d{2}-\d{2}-\d{4}$/.test(userDateOfBirth);
             if (!isValidDate) {
-                throw new BadRequestError('please provide date in day-month-year format')
+                throw new BadRequestError('Please provide date in day-month-year format');
             }
             const [day, month, year] = userDateOfBirth.split("-");
             const dob = new Date(`${year}-${month}-${day}`);
@@ -654,35 +656,25 @@ const userEditProfile = async (req, res, next) => {
         }
 
         if (userGender) {
-            updateObj.gender = userGender
+            updateObj.gender = userGender;
         }
 
-        if (file) {
-            // const filePath = file.filename; // use filename instead of path
-            // const basePath = `http://${req.get("host")}/public/uploads/`;
-            // const image = `${basePath}${filePath}`;
-            updateObj.image = s3ImageUrl;
-        }
-
-        const updateuser = await prisma.user.update({
-            where: {
-                id: id
-            },
+        const updateUser = await prisma.user.update({
+            where: { id: id },
             data: updateObj
         });
 
-        if (!updateuser) {
-            throw new ValidationError("user not update")
+        if (!updateUser) {
+            throw new ValidationError("User not updated");
         }
 
-        handlerOk(res, 200, updateuser, 'user updated successfully')
-
-
+        handlerOk(res, 200, updateUser, 'User updated successfully');
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
 
 const userLogOut = async (req, res, next) => {
     try {
@@ -712,22 +704,146 @@ const userLogOut = async (req, res, next) => {
 }
 
 
+
+// const userDeleteAccount = async (req, res, next) => {
+//     try {
+//         const { id } = req.user;
+
+//         const result = await prisma.$transaction(async (tx) => {
+//             // 1) Chat rooms created by this user (blocks via creatorId)
+//             const rooms = await tx.chatRoom.findMany({
+//                 where: { creatorId: id },
+//                 select: { id: true },
+//             });
+//             const roomIds = rooms.map(r => r.id);
+
+//             if (roomIds.length) {
+//                 // Messages reference chatRoom WITHOUT onDelete cascade → delete first
+//                 await tx.message.deleteMany({ where: { chatRoomId: { in: roomIds } } });
+//                 // Participants have onDelete: Cascade, but deleteMany is harmless/explicit
+//                 await tx.chatRoomParticipant.deleteMany({ where: { chatRoomId: { in: roomIds } } });
+//                 // Now remove the rooms
+//                 await tx.chatRoom.deleteMany({ where: { id: { in: roomIds } } });
+//             }
+
+//             // 2) Messages sent by this user in any room (senderId → User.id). Keep messages, null sender.
+//             await tx.message.updateMany({
+//                 where: { senderId: id },
+//                 data: { senderId: null },
+//             });
+
+//             // 3) Wallet & transactions (delete tx first to avoid FK on walletId)
+//             await tx.walletTransaction.deleteMany({ where: { wallet: { userId: id } } });
+//             await tx.wallet.deleteMany({ where: { userId: id } });
+
+//             // 4) Purchases / subscriptions / posts by user
+//             await tx.connectPurchase.deleteMany({ where: { userId: id } });
+//             await tx.userSubscription.deleteMany({ where: { userId: id } });
+//             await tx.userPost.deleteMany({ where: { userId: id } });
+
+//             // 5) Event participation & volunteering (these relations default to RESTRICT)
+//             await tx.eventParticipant.deleteMany({ where: { userId: id } });
+//             await tx.volunteerRequest.deleteMany({ where: { volunteerId: id } });
+
+//             // 6) Credits referencing user (nullable → set null)
+//             await tx.credit.updateMany({ where: { userId: id }, data: { userId: null } });
+
+//             // 7) Misc direct user FKs (RESTRICT by default unless you set Cascade)
+//             await tx.notification.deleteMany({ where: { userId: id } });
+//             await tx.donation.deleteMany({ where: { userId: id } });
+
+//             // (Likes/comments/saves/tasks etc. are already modeled with onDelete: Cascade to User)
+
+//             // 8) Finally: delete the user
+//             const deletedUser = await tx.user.delete({ where: { id } });
+//             return { deletedUser };
+//         });
+
+//         handlerOk(res, 200, result, 'User account deleted successfully');
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
 const userDeleteAccount = async (req, res, next) => {
     try {
         const { id } = req.user;
 
-        await prisma.$transaction([
-            prisma.wallet.deleteMany({ where: { userId: id } }),
-            prisma.connectPurchase.deleteMany({ where: { userId: id } }),
-            prisma.userSubscription.deleteMany({ where: { userId: id } }),
-            prisma.user.delete({ where: { id: id } }),
-        ]);
+        const result = await prisma.$transaction(async (tx) => {
+            // --- 0) (Optional) resolve walletTx via walletIds to avoid relational filter quirks
+            const wallets = await tx.wallet.findMany({ where: { userId: id }, select: { id: true } });
+            const walletIds = wallets.map(w => w.id);
+
+            // --- 1) Chat rooms created by this user (creatorId -> User)
+            const rooms = await tx.chatRoom.findMany({
+                where: { creatorId: id },
+                select: { id: true },
+            });
+            const roomIds = rooms.map(r => r.id);
+
+            if (roomIds.length) {
+                await tx.message.deleteMany({ where: { chatRoomId: { in: roomIds } } });
+                await tx.chatRoomParticipant.deleteMany({ where: { chatRoomId: { in: roomIds } } });
+                await tx.chatRoom.deleteMany({ where: { id: { in: roomIds } } });
+            }
+
+            // --- 2) Messages sent by this user anywhere → keep messages, orphan sender
+            await tx.message.updateMany({ where: { senderId: id }, data: { senderId: null } });
+
+            // --- 3) Wallet & transactions
+            if (walletIds.length) await tx.walletTransaction.deleteMany({ where: { walletId: { in: walletIds } } });
+            await tx.wallet.deleteMany({ where: { userId: id } });
+
+            // --- 4) Purchases / subscriptions / user posts
+            await tx.connectPurchase.deleteMany({ where: { userId: id } });
+            await tx.userSubscription.deleteMany({ where: { userId: id } });
+            await tx.userPost.deleteMany({ where: { userId: id } });
+
+            // --- 5) Event participation / volunteering
+            await tx.eventParticipant.deleteMany({ where: { userId: id } });
+            await tx.volunteerRequest.deleteMany({ where: { volunteerId: id } });
+
+            // --- 6) Credits (nullable -> set null)
+            await tx.credit.updateMany({ where: { userId: id }, data: { userId: null } });
+
+            // --- 7) Notifications, donations
+            await tx.notification.deleteMany({ where: { userId: id } });
+            await tx.donation.deleteMany({ where: { userId: id } });
+
+            // --- 8) Saves / likes / comments / topics / tasks (defensive even if cascaded)
+            await tx.savedBlog.deleteMany({ where: { userId: id } });
+            await tx.savedTopic.deleteMany({ where: { userId: id } });
+            await tx.task.deleteMany({ where: { userId: id } });
+
+            await tx.like.deleteMany({ where: { userId: id } });
+            await tx.postLike.deleteMany({ where: { userId: id } });
+            await tx.userPostLike.deleteMany({ where: { userId: id } });
+
+            await tx.commentLike.deleteMany({ where: { userId: id } });
+            await tx.userPostCommentLike.deleteMany({ where: { userId: id } });
+            await tx.postCommentLike.deleteMany({ where: { userId: id } });
+
+            await tx.comment.deleteMany({ where: { userId: id } });
+            await tx.userPostComment.deleteMany({ where: { userId: id } });
+            await tx.postComment.deleteMany({ where: { userId: id } });
+
+            // --- 9) PostRequests (LIKELY CULPRIT: userId has no onDelete)
+            await tx.postRequest.deleteMany({ where: { userId: id } });
+
+            // --- 10) Finally delete the user
+            const deletedUser = await tx.user.delete({ where: { id } });
+            return { deletedUser };
+        });
 
         handlerOk(res, 200, null, 'User account deleted successfully');
     } catch (error) {
+        // Log the exact FK to know what else to clear (Prisma exposes meta.field_name)
+        console.error('Delete failed', error.code, error.meta);
         next(error);
     }
 };
+
+
 
 const getMe = async (req, res, next) => {
     try {
@@ -760,6 +876,38 @@ const getMe = async (req, res, next) => {
     }
 }
 
+
+const submitFeedBack = async (req, res, next) => {
+    try {
+        const { email, message } = req.body;
+
+        const findemail = await prisma.user.findFirst({
+            where: {
+                email
+            }
+        });
+
+        if (!findemail) {
+            throw new NotFoundError("email not found")
+        }
+        const createfeedback = await prisma.feedBack.create({
+            data: {
+                email,
+                message
+            }
+        });
+
+        if (!createfeedback) {
+            throw new ValidationError("feed back not submit")
+        }
+
+        handlerOk(res, 201, createfeedback, "feed back submitted successfully")
+
+    } catch (error) {
+        next(error)
+    }
+}
+
 const getUserContext = async (req, res, next) => {
     try {
         const { id } = req.user;
@@ -783,6 +931,7 @@ const getUserContext = async (req, res, next) => {
         }
 
         handlerOk(res, 200, finduser, 'User context retrieved successfully')
+
     } catch (error) {
         next(error)
     }
@@ -802,6 +951,7 @@ module.exports = {
     resendOtp,
     createProfile,
     getMe,
+    submitFeedBack,
     getUserContext
 
 }

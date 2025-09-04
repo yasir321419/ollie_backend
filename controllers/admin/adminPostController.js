@@ -3,6 +3,9 @@ const { BadRequestError, ValidationError, NotFoundError } = require("../../resHa
 const { handlerOk } = require("../../resHandler/responseHandler");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
+
 
 const createPost = async (req, res, next) => {
   try {
@@ -24,12 +27,12 @@ const createPost = async (req, res, next) => {
     // const basePath = `http://${req.get("host")}/public/uploads/`;
     // const blogImage = `${basePath}${filePath}`;
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -61,13 +64,57 @@ const getAllPosts = async (req, res, next) => {
   try {
     const { id } = req.user;
 
-    const findpost = await prisma.post.findMany({ where: { adminId: id }, include: { category: true } });
-
-    if (!findpost) {
-      throw new NotFoundError("post not found")
+    const findpost = await prisma.post.findMany({ where: { adminId: id }, include: { category: true, admin: true } });
+    const finduserpost = await prisma.userPost.findMany({
+      include: {
+        category: true,
+        user: true
+      }
+    });
+    if (findpost.length === 0 && finduserpost.length === 0) {
+      throw new NotFoundError("posts not found")
     }
 
-    handlerOk(res, 200, findpost, 'posts found successfully')
+    console.log(findpost, 'findpost');
+    console.log(finduserpost, 'finduserpost');
+
+
+
+    // Normalize shape so frontend can render a single list
+    const normalized = [
+      ...findpost.map(p => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        image: p.image,
+        views: p.views,
+        isFlagged: p.isFlagged,
+        reportCount: p.reportCount,
+        isDeleted: p.isDeleted,
+        category: p.category,
+        isReport: p.isReport,
+        created: { id: p.admin.id, name: p.admin.name, email: p.admin.email, role: 'ADMIN' },
+        type: 'ADMIN_POST',
+        createdAt: p.createdAt,
+      })),
+      ...finduserpost.map(p => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        image: p.image,
+        views: p.views,
+        isFlagged: p.isFlagged,
+        reportCount: p.reportCount,
+        isDeleted: p.isDeleted,
+        category: p.category,
+        isReport: p.isReport,
+        author: { id: p.user.id, name: p.user.name, email: p.user.email, role: 'USER' },
+        type: 'USER_POST',
+        createdAt: p.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    handlerOk(res, 200, normalized, 'posts found successfully')
   } catch (error) {
     next(error)
   }
@@ -81,12 +128,12 @@ const updatePost = async (req, res, next) => {
     const { postId } = req.params;
     const updatedObj = {};
 
-    const filePath = file.path; // Full file path of the uploaded file
+    // const filePath = file.path; // Full file path of the uploaded file
     const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
     const contentType = file.mimetype; // The MIME type of the file
 
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = file.buffer;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -136,13 +183,12 @@ const updatePost = async (req, res, next) => {
 
 const deletePost = async (req, res, next) => {
   try {
-    const { id } = req.user;
     const { postId } = req.params;
 
     const findPost = await prisma.post.findFirst({
       where: {
         id: postId,
-        adminId: id
+        isReport: true
       }
     });
 
@@ -150,19 +196,60 @@ const deletePost = async (req, res, next) => {
       throw new NotFoundError("post not found")
     }
 
-    const deletepost = await prisma.post.delete({
+    if (findPost) {
+      // throw new NotFoundError("post not found")
+
+      const deletepost = await prisma.post.delete({
+        where: {
+          id: findPost.id,
+        }
+      });
+
+      return handlerOk(res, 200, null, 'post deleted successfully')
+
+    }
+
+    const findUserPost = await prisma.userPost.findFirst({
       where: {
         id: postId,
-        adminId: id
+        isReport: true
       }
     });
 
-    if (!deletepost) {
-      throw new ValidationError("post not delete")
+    if (!findUserPost) {
+      throw new NotFoundError("post not found")
     }
 
-    handlerOk(res, 200, null, 'post deleted successfully')
+    if (findUserPost) {
 
+      const deletepost = await prisma.userPost.delete({
+        where: {
+          id: postId,
+        }
+      });
+
+      return handlerOk(res, 200, null, 'post deleted successfully')
+
+    }
+
+
+
+
+  } catch (error) {
+    next(error)
+  }
+}
+
+const userFeedBack = async (req, res, next) => {
+  try {
+    const findusersfeedback = await prisma.feedBack.findMany({});
+
+    if (findusersfeedback.length === 0) {
+      throw new NotFoundError("users feed back not found");
+
+    }
+
+    handlerOk(res, 200, findusersfeedback, "users feed back found successfully")
   } catch (error) {
     next(error)
   }
@@ -172,5 +259,6 @@ module.exports = {
   createPost,
   getAllPosts,
   updatePost,
-  deletePost
+  deletePost,
+  userFeedBack
 }

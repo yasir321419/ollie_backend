@@ -109,6 +109,18 @@ const createProfileSchema = Joi.object({
   }),
 })
 
+const submitFeedBackSchema = Joi.object({
+  query: Joi.object({}),
+  params: Joi.object({}),
+  body: Joi.object({
+
+    email: Joi.string().required(),
+    message: Joi.string().required(),
+
+
+  }),
+})
+
 module.exports = {
   userRegisterSchema,
   userVerifyOtpSchema,
@@ -117,5 +129,6 @@ module.exports = {
   userLoginSchema,
   userEditProfileSchema,
   userResendOtpSchema,
-  createProfileSchema
+  createProfileSchema,
+  submitFeedBackSchema
 }

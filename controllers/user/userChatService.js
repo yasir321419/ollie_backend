@@ -84,28 +84,28 @@ const sendMessage = async (io, socket, data) => {
   console.log("New message saved:", newMessage);
 
   // Emit the message to the chatroom and all participants
-  // chatRoomData.chatRoomParticipants.forEach((p) => {
-  //   // Loop through userIds and adminIds and emit the message to them
-  //   const allParticipants = [...p.userIds, ...p.adminIds];
+  chatRoomData.chatRoomParticipants.forEach((p) => {
+    // Loop through userIds and adminIds and emit the message to them
+    const allParticipants = [...p.userIds, ...p.adminIds];
 
-  //   allParticipants.forEach((recipientId) => {
-  //     if (recipientId) {
-  //       console.log("Emitting message to recipient:", recipientId);
-  //       io.to(recipientId).emit("message", {
-  //         status: "success",
-  //         data: newMessage,
-  //         message: "Message sent successfully",
-  //       });
-  //     }
-  //   });
-  // });
+    allParticipants.forEach((recipientId) => {
+      if (recipientId) {
+        console.log("Emitting message to recipient:", recipientId);
+        io.to(recipientId).emit("message", {
+          status: "success",
+          data: newMessage,
+          message: "Message sent successfully",
+        });
+      }
+    });
+  });
 
   // Optionally, emit the success message to the sender
-  return socket.emit("message", {
-    status: "success",
-    data: newMessage,
-    message: "Message sent successfully",
-  });
+  // return socket.emit("message", {
+  //   status: "success",
+  //   data: newMessage,
+  //   message: "Message sent successfully",
+  // });
 };
 
 

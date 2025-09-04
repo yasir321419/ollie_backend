@@ -3,7 +3,8 @@ const { ConflictError, NotFoundError, ValidationError } = require("../../resHand
 const { handlerOk } = require("../../resHandler/responseHandler");
 const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
-
+const { v4: uuidv4 } = require('uuid');
+const path = require("path");
 
 
 
@@ -60,13 +61,16 @@ const createGroupChatRoom = async (req, res, next) => {
   try {
     const { id, userType } = req.user; // "USER" or "ADMIN"
     let { name, description } = req.body;
-    let image;
 
-    // optional file upload
-    if (req.file) {
-      const basePath = `http://${req.get("host")}/public/uploads/`;
-      image = `${basePath}${req.file.filename}`;
-    }
+    const file = req.file;
+
+    const fileBuffer = file.buffer;
+    const folder = 'uploads';
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+    const contentType = file.mimetype;
+
+    const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
+
 
     if (!name) return handlerOk(res, 400, { error: "name is required" }, "Bad request");
 
@@ -82,7 +86,7 @@ const createGroupChatRoom = async (req, res, next) => {
         creatorType: userType,
         name,
         description,
-        image,
+        image: s3ImageUrl,
         chatRoomParticipants: {
           // ✅ ONE row per room, with JSON arrays present for both fields
           create: { userIds, adminIds },
@@ -258,13 +262,11 @@ const uploadAttachment = async (req, res, next) => {
     const { chatRoomId } = req.params;
     const { attachmentType } = req.body;
     const file = req.file;
-
-    const filePath = file.path; // Full file path of the uploaded file
-    const folder = 'uploads'; // Or any folder you want to store the image in
-    const filename = file.filename; // The filename of the uploaded file
-    const contentType = file.mimetype; // The MIME type of the file
-
-    const fileBuffer = fs.readFileSync(filePath);
+    // Check if the file exists before attempting to use it
+    const fileBuffer = file.buffer;
+    const folder = 'uploads';
+    const filename = `${uuidv4()}-${Date.now()}${path.extname(file.originalname)}`;
+    const contentType = file.mimetype;
 
     const s3ImageUrl = await uploadFileWithFolder(fileBuffer, filename, contentType, folder);
 
@@ -495,5 +497,5 @@ module.exports = {
   getGroupChatRooms,
   getFeatureGroups,
   uploadAttachment,
-  addparticipantInChatRoom
+  addparticipantInChatRoom,
 }
