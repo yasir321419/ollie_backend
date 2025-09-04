@@ -240,9 +240,25 @@ const deletePost = async (req, res, next) => {
   }
 }
 
+const userFeedBack = async (req, res, next) => {
+  try {
+    const findusersfeedback = await prisma.feedBack.findMany({});
+
+    if (findusersfeedback.length === 0) {
+      throw new NotFoundError("users feed back not found");
+
+    }
+
+    handlerOk(res, 200, findusersfeedback, "users feed back found successfully")
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createPost,
   getAllPosts,
   updatePost,
-  deletePost
+  deletePost,
+  userFeedBack
 }

@@ -876,6 +876,37 @@ const getMe = async (req, res, next) => {
     }
 }
 
+const submitFeedBack = async (req, res, next) => {
+    try {
+        const { email, message } = req.body;
+
+        const findemail = await prisma.user.findFirst({
+            where: {
+                email
+            }
+        });
+
+        if (!findemail) {
+            throw new NotFoundError("email not found")
+        }
+        const createfeedback = await prisma.feedBack.create({
+            data: {
+                email,
+                message
+            }
+        });
+
+        if (!createfeedback) {
+            throw new ValidationError("feed back not submit")
+        }
+
+        handlerOk(res, 201, createfeedback, "feed back submitted successfully")
+
+    } catch (error) {
+        next(error)
+    }
+}
+
 
 module.exports = {
     userRegister,
@@ -889,6 +920,7 @@ module.exports = {
     userDeleteAccount,
     resendOtp,
     createProfile,
-    getMe
+    getMe,
+    submitFeedBack
 
 }

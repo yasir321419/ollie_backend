@@ -380,9 +380,6 @@ model User {
 }
 
 
-
-
-
 model Otp {
   id         String       @id @default(uuid())
   otp        String    @unique
@@ -697,3 +694,13 @@ model Notification {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model FeedBack{
+    id            String      @id @default(uuid())
+  message   String @db.LongText  
+  email    String @unique
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+  }
+
+

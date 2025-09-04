@@ -42,5 +42,12 @@ adminPostRouter.delete(
   adminPostController.deletePost
 );
 
+adminPostRouter.get(
+  "/userFeedBack",
+  limiter,
+  verifyAdminToken,
+  adminPostController.userFeedBack
+);
+
 
 module.exports = adminPostRouter;
