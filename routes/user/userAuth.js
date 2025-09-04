@@ -96,6 +96,13 @@ userAuthRouter.get(
   userAuthController.getMe
 );
 
+userAuthRouter.get(
+  "/getUserContext",
+  limiter,
+  verifyUserToken,
+  userAuthController.getUserContext
+);
+
 
 
 

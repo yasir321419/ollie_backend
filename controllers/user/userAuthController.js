@@ -760,6 +760,34 @@ const getMe = async (req, res, next) => {
     }
 }
 
+const getUserContext = async (req, res, next) => {
+    try {
+        const { id } = req.user;
+
+        const finduser = await prisma.user.findUnique({
+            where: {
+                id
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                additional_context: true,
+                updatedAt: true
+            }
+        });
+
+        if (!finduser) {
+            throw new NotFoundError("User not found");
+        }
+
+        handlerOk(res, 200, finduser, 'User context retrieved successfully')
+    } catch (error) {
+        next(error)
+    }
+}
+
 
 module.exports = {
     userRegister,
@@ -773,6 +801,7 @@ module.exports = {
     userDeleteAccount,
     resendOtp,
     createProfile,
-    getMe
+    getMe,
+    getUserContext
 
 }
