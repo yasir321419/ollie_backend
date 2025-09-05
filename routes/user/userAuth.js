@@ -10,34 +10,29 @@ const handleMultiPartData = require("../../middleware/multiPartData");
 
 userAuthRouter.post(
   "/userRegister",
-  limiter,
   validateRequest(userRegisterSchema),
   userAuthController.userRegister
 );
 
 userAuthRouter.get(
   "/getInterest",
-  limiter,
   userAuthController.getInterest
 );
 
 userAuthRouter.post(
   "/userVerifyOtp",
-  limiter,
   validateRequest(userVerifyOtpSchema),
   userAuthController.userVerifyOtp
 );
 
 userAuthRouter.post(
   "/userForgetPassword",
-  limiter,
   validateRequest(userForgetPasswordSchema),
   userAuthController.userForgetPassword
 );
 
 userAuthRouter.put(
   "/userResetPassword",
-  limiter,
   verifyUserToken,
   validateRequest(userResetPasswordSchema),
   userAuthController.userResetPassword
@@ -45,14 +40,12 @@ userAuthRouter.put(
 
 userAuthRouter.post(
   "/userLogin",
-  limiter,
   validateRequest(userLoginSchema),
   userAuthController.userLogin
 );
 
 userAuthRouter.put(
   "/userEditProfile",
-  limiter,
   verifyUserToken,
   validateRequest(userEditProfileSchema),
   handleMultiPartData.single("image"),
@@ -61,21 +54,18 @@ userAuthRouter.put(
 
 userAuthRouter.post(
   "/userLogOut",
-  limiter,
   verifyUserToken,
   userAuthController.userLogOut
 );
 
 userAuthRouter.delete(
   "/userDeleteAcccount",
-  limiter,
   verifyUserToken,
   userAuthController.userDeleteAccount
 );
 
 userAuthRouter.post(
   "/resendOtp",
-  limiter,
   validateRequest(userResendOtpSchema),
   userAuthController.resendOtp
 );
@@ -83,7 +73,6 @@ userAuthRouter.post(
 
 userAuthRouter.post(
   "/createProfile",
-  limiter,
   verifyUserToken,
   validateRequest(createProfileSchema),
   userAuthController.createProfile
@@ -91,21 +80,18 @@ userAuthRouter.post(
 
 userAuthRouter.get(
   "/getMe",
-  limiter,
   verifyUserToken,
   userAuthController.getMe
 );
 
 userAuthRouter.post(
   "/submitFeedBack",
-  limiter,
   verifyUserToken,
   validateRequest(submitFeedBackSchema),
   userAuthController.submitFeedBack
 )
 userAuthRouter.get(
   "/getUserContext",
-  limiter,
   verifyUserToken,
   userAuthController.getUserContext
 );
