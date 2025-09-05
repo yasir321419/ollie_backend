@@ -3,7 +3,7 @@ const rateLimit = require("express-rate-limit");
 // Standard rate limiter for regular endpoints
 const limiter = rateLimit({
 
-  limit: 10,
+  limit: 100,
   windowMs: 10000,
 
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) || 10 * 60 * 1000, // 10 minutes
