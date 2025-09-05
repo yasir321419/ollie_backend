@@ -49,25 +49,7 @@ app.use(globalLimiter);
 
 // CORS configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-
-    if (process.env.NODE_ENV === 'production') {
-      // In production, specify allowed origins
-      const allowedOrigins = process.env.CORS_ORIGIN ?
-        process.env.CORS_ORIGIN.split(',') :
-        ['https://admin.theollie.app', 'https://api.theollie.app'];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    } else {
-      // In development, allow all origins
-      return callback(null, true);
-    }
-  },
+  origin: ["https://theollie.app", "https://admin.theollie.app", "https://api.theollie.app", "https://dashboard-olie-g.vercel.app", "*"],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
   credentials: false
