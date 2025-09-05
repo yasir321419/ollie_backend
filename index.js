@@ -128,7 +128,7 @@ app.get("/api/v1/home", (req, res) => {
 
 
 app.get("/", (req, res) => {
-  res.send("server is running.....!!!!!");
+  res.send("server is running.....!!!");
 });
 
 dbConnect();
