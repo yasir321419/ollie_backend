@@ -1,95 +1,430 @@
+// const express = require('express');
+// const cors = require("cors");
+// const bodyParser = require("body-parser");
+// require("dotenv").config();
+// const app = express();
+// const port = process.env.PORT || 3000;
+// const API_PREFIX = process.env.API_PREFIX;  // Prefix for all routes
+// const rootRouter = require("./routes/index");
+// const globalErrorMiddleware = require("./middleware/globalMiddleware");
+// const dbConnect = require('./db/connectivity');
+// const socketIo = require("socket.io");
+// const http = require("http");
+// const server = http.createServer(app);
+// const rateLimit = require('express-rate-limit');
+// const { WebSocketServer } = require('ws');
+// const io = socketIo(server, {
+//   cors: {
+//     origin: process.env.CORS_ORIGIN || "*",
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     credentials: false
+//   }
+// });
+// const ChatRoomController = require("./controllers/user/userChatService");
+// const jwt = require('jsonwebtoken');
+// const adminSeed = require('./seeder/adminseed');
+// const morgan = require('morgan');
+// require("dotenv").config();
+
+// console.log(API_PREFIX, 'API_PREFIX');
+
+// app.use(morgan('dev'));
+
+
+// // Logging middleware
+// app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// // Global rate limiting for all endpoints
+// const globalLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: process.env.NODE_ENV === 'production' ? 5000 : 10000, // Limit each IP
+//   message: {
+//     success: false,
+//     message: "Too many requests from this IP, please try again later."
+//   },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
+// app.use(globalLimiter);
+
+// // CORS configuration
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     // Allow requests with no origin (mobile apps, curl, etc.)
+//     if (!origin) return callback(null, true);
+
+//     if (process.env.NODE_ENV === 'production') {
+//       // In production, specify allowed origins
+//       const allowedOrigins = process.env.CORS_ORIGIN ?
+//         process.env.CORS_ORIGIN.split(',') :
+//         ['https://admin.theollie.app', 'https://api.theollie.app'];
+
+//       if (allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       }
+//       return callback(new Error('Not allowed by CORS'));
+//     } else {
+//       // In development, allow all origins
+//       return callback(null, true);
+//     }
+//   },
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
+//   credentials: false
+// };
+// app.use(cors(corsOptions));
+
+// // Body parsing with size limits
+// app.use('/public', express.static('public'));
+// app.use(bodyParser.json({
+//   limit: '10mb',
+//   verify: (req, res, buf) => {
+//     // Store raw body for webhook verification if needed
+//     req.rawBody = buf;
+//   }
+// }));
+// app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// // Security: Remove X-Powered-By header
+// app.disable('x-powered-by');
+
+// // AI request logging (only in development or when specifically enabled)
+// if (process.env.NODE_ENV === 'development' || process.env.AI_DEBUG_LOGGING === 'true') {
+//   app.use((req, res, next) => {
+//     if (req.path.startsWith(API_PREFIX + '/ai/')) {
+//       console.log(`🤖 AI API Call: ${req.method} ${req.path}`);
+//       if (process.env.AI_FULL_LOGGING === 'true') {
+//         console.log('Headers:', JSON.stringify(req.headers, null, 2));
+//         console.log('Body:', JSON.stringify(req.body, null, 2));
+//       }
+//     }
+//     next();
+//   });
+// }
+
+// app.set('io', io);
+// // Prefix all routes with /api/v1
+// app.use(API_PREFIX, rootRouter);
+
+// // app.use(rootRouter);
+
+
+// // Global error handling
+// app.use(globalErrorMiddleware);
+
+// app.get("/health", (req, res) => {
+//   console.log("Health check triggered");
+//   res.status(200).send("OK");
+// });
+
+// app.get(`${API_PREFIX}/user`, (req, res) => {
+//   res.send("welcome to user");
+// });
+
+// app.get("/api/v1/home", (req, res) => {
+//   res.send("welcome to home");
+// });
+
+
+// app.get("/", (req, res) => {
+//   res.send("server is running.....!!!");
+// });
+
+// dbConnect();
+
+// adminSeed();
+
+
+
+// io.use((socket, next) => {
+//   // Get the token from the socket handshake headers
+//   const token = socket.handshake.headers["x-access-token"] || socket.handshake.headers["authorization"]?.split(" ")[1];
+
+//   if (!token) {
+//     console.log("Token missing in socket connection");
+//     return next(new Error("Authentication token missing"));
+//   }
+//   console.log(token, "token");
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.SECRET_KEY); // your JWT secret
+//     socket.userId = decoded.id;
+//     console.log(socket.userId, "userId");
+
+//     next();
+//   } catch (err) {
+//     console.log("Invalid token");
+//     return next(new Error("Invalid authentication token"));
+//   }
+// });
+
+// io.on("connection", (socket) => {
+//   console.log("a user is connected", socket.id);
+
+
+
+//   // socket.on("joinRoom", (data) => {
+//   //   console.log("data_in_joinRoom_in_backend:", data);
+
+//   //   socket.join(data.chatroom);               // Join the chatroom
+//   //   socket.join(socket.userId.toString());    // Personal room
+//   //   socket.join(socket.adminId);
+//   //   ChatRoomController.getChatRoomData(socket, data);
+//   // });
+
+//   socket.on("joinRoom", (data) => {
+//     console.log("data_in_joinRoom_in_backend:", data);
+
+//     // Ensure the user joins the chatroom and personal room
+//     socket.join(data.chatroom);               // Join the chatroom
+//     socket.join(socket.userId.toString());    // Personal room
+//     socket.join(socket.adminId);              // Admin room (if applicable)
+
+//     // Fetch and emit chatroom data (messages, participants, etc.)
+//     ChatRoomController.getChatRoomData(socket, data);
+//   });
+
+
+
+
+//   // Leave Chatroom
+//   socket.on("leaveRoom", ({ chatroom, user }) => {
+//     socket.leave(chatroom);
+//     socket.leave(user);
+//     console.log("Socket Disconnect From Back End");
+//     console.log(`user left`);
+//   });
+
+//   // Send Message
+//   socket.on("sendMessage", (data) => {
+//     ChatRoomController.sendMessage(io, socket, data);
+//   });
+
+
+
+//   socket.on("disconnect", () => {
+//     console.log(`user left`);
+//   });
+
+
+// })
+
+// // Create AI WebSocket Server
+// const aiWss = new WebSocketServer({
+//   server: server,
+//   path: '/ai'
+// });
+
+// aiWss.on('connection', async (ws, req) => {
+//   console.log('AI WebSocket client connected');
+
+//   const url = new URL(req.url, `http://${req.headers.host}`);
+//   const mode = url.searchParams.get('mode') || 'chat-to-chat';
+
+//   let userId = null;
+//   let cleanup = () => { };
+
+//   // Handle authentication
+//   const authHandler = (data) => {
+//     try {
+//       const message = JSON.parse(data.toString());
+//       if (message.type === 'auth') {
+//         try {
+//           const decoded = jwt.verify(message.token, process.env.SECRET_KEY);
+//           userId = decoded.id;
+//           console.log(`AI User ${userId} authenticated with mode: ${mode}`);
+
+//           // Set up appropriate handler based on mode
+//           setupAIHandler(ws, userId, mode).then(cleanupFn => {
+//             cleanup = cleanupFn;
+
+//             // Send ready message
+//             ws.send(JSON.stringify({
+//               type: 'session.ready',
+//               message: `Connected to Ollie AI in ${mode} mode`,
+//               mode: mode
+//             }));
+
+//             // Send initial welcome message from Ollie
+//             setTimeout(async () => {
+//               const welcomeMessage = `Hey there! 👋 I'm Ollie, your friendly assistant here to help you make the most of the app.
+
+// I can set reminders, manage your profile, help you write posts, guide you through blogs, chat with your friends, and even handle payments or events!
+
+// If you're ever stuck, just ask. 😊
+// Want a quick overview of what I can do?`;
+
+//               ws.send(JSON.stringify({
+//                 type: 'response.text.complete',
+//                 content: welcomeMessage
+//               }));
+
+//               // Generate TTS audio for chat-to-speech mode
+//               if (mode === 'chat-to-speech') {
+//                 try {
+//                   const { openaiService } = require('./AI/services/openai-service');
+//                   const audioBuffer = await openaiService.generateSpeech(welcomeMessage, 'alloy', 'DEFAULT');
+//                   const audioBase64 = audioBuffer.toString('base64');
+
+//                   ws.send(JSON.stringify({
+//                     type: 'response.audio.complete',
+//                     audio: audioBase64,
+//                     format: 'mp3'
+//                   }));
+//                 } catch (error) {
+//                   console.error('Error generating welcome message audio:', error);
+//                 }
+//               }
+//             }, 500);
+//           }).catch(error => {
+//             console.error(`Error setting up ${mode} mode:`, error);
+//             ws.send(JSON.stringify({
+//               type: 'error',
+//               message: `Failed to setup ${mode} mode`
+//             }));
+//           });
+
+//           // Remove auth handler after successful authentication
+//           ws.off('message', authHandler);
+//         } catch (error) {
+//           console.error('AI WebSocket authentication error:', error);
+//           ws.send(JSON.stringify({
+//             type: 'error',
+//             message: 'Authentication failed'
+//           }));
+//           ws.close();
+//         }
+//       }
+//     } catch (error) {
+//       console.error('Error parsing auth message:', error);
+//     }
+//   };
+
+//   // Wait for authentication
+//   ws.on('message', authHandler);
+
+//   ws.on('close', () => {
+//     console.log(`AI User ${userId} disconnected from ${mode} mode`);
+//     cleanup();
+//   });
+
+//   ws.on('error', (error) => {
+//     console.error(`AI WebSocket error for user ${userId}:`, error);
+//     cleanup();
+//   });
+// });
+
+// // AI handler setup function
+// async function setupAIHandler(ws, userId, mode) {
+//   switch (mode) {
+//     case 'chat-to-chat':
+//       return await handleChatToChat(ws, userId);
+//     case 'speech-to-chat':
+//       return await handleSpeechToChat(ws, userId);
+//     case 'chat-to-speech':
+//       return await handleChatToSpeech(ws, userId);
+//     default:
+//       throw new Error('Invalid AI mode specified');
+//   }
+// }
+
+// server.listen(port, '0.0.0.0', () => {
+//   console.log(`server is run at ${port}`);
+// });
+
+// // app.listen(port, () => {
+// //   console.log(`Server is running at http://localhost:${port}`);
+// // });
+
+
+
 const express = require('express');
-const cors = require("cors");
-const bodyParser = require("body-parser");
-require("dotenv").config();
+const cors = require('cors');
+const bodyParser = require('body-parser');
+require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 3000;
-const API_PREFIX = process.env.API_PREFIX;  // Prefix for all routes
-const rootRouter = require("./routes/index");
-const globalErrorMiddleware = require("./middleware/globalMiddleware");
+const API_PREFIX = process.env.API_PREFIX || '/api/v1';
+const rootRouter = require('./routes/index');
+const globalErrorMiddleware = require('./middleware/globalMiddleware');
 const dbConnect = require('./db/connectivity');
-const socketIo = require("socket.io");
-const http = require("http");
+const socketIo = require('socket.io');
+const http = require('http');
 const server = http.createServer(app);
 const rateLimit = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.CORS_ORIGIN || "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: false
-  }
-});
-const ChatRoomController = require("./controllers/user/userChatService");
+const ChatRoomController = require('./controllers/user/userChatService');
 const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
 const morgan = require('morgan');
-require("dotenv").config();
 
 console.log(API_PREFIX, 'API_PREFIX');
 
-app.use(morgan('dev'));
-
-// app.use(cors({ origin: '*' }));
-
-// Logging middleware
+// === Request Logging ===
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Global rate limiting for all endpoints
+// === CORS CONFIGURATION ===
+const parseOrigins = (csv) =>
+  (csv || '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
+const defaultProd = ['https://admin.theollie.app', 'https://api.theollie.app'];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow mobile/curl/Postman
+
+    if (process.env.NODE_ENV === 'production') {
+      const list = allowedOrigins.length ? allowedOrigins : defaultProd;
+      const lowerOrigin = origin.toLowerCase().replace(/\/+$/, '');
+      if (list.includes(lowerOrigin)) return callback(null, true);
+      console.warn(`🚫 CORS blocked: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+    return callback(null, true); // dev: allow all
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
+  credentials: false,
+};
+
+// Apply CORS first
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // handle preflight globally
+
+// === Global Rate Limiter (skip preflight) ===
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 5000 : 10000, // Limit each IP
+  max: process.env.NODE_ENV === 'production' ? 5000 : 10000,
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again later."
+    message: 'Too many requests from this IP, please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
 });
 app.use(globalLimiter);
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-
-    if (process.env.NODE_ENV === 'production') {
-      // In production, specify allowed origins
-      const allowedOrigins = process.env.CORS_ORIGIN ?
-        process.env.CORS_ORIGIN.split(',') :
-        ['https://admin.theollie.app', 'https://api.theollie.app'];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    } else {
-      // In development, allow all origins
-      return callback(null, true);
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
-  credentials: false
-};
-app.use(cors(corsOptions));
-
-// Body parsing with size limits
+// === Static + Body Parsers ===
 app.use('/public', express.static('public'));
-app.use(bodyParser.json({
-  limit: '10mb',
-  verify: (req, res, buf) => {
-    // Store raw body for webhook verification if needed
-    req.rawBody = buf;
-  }
-}));
+app.use(
+  bodyParser.json({
+    limit: '10mb',
+    verify: (req, res, buf) => {
+      req.rawBody = buf; // keep raw body for Stripe webhooks
+    },
+  })
+);
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Security: Remove X-Powered-By header
+// === Security ===
 app.disable('x-powered-by');
 
-// AI request logging (only in development or when specifically enabled)
+// === Debugging for AI routes in dev ===
 if (process.env.NODE_ENV === 'development' || process.env.AI_DEBUG_LOGGING === 'true') {
   app.use((req, res, next) => {
     if (req.path.startsWith(API_PREFIX + '/ai/')) {
@@ -103,129 +438,90 @@ if (process.env.NODE_ENV === 'development' || process.env.AI_DEBUG_LOGGING === '
   });
 }
 
-app.set('io', io);
-// Prefix all routes with /api/v1
+// === Routes ===
+app.set('io', socketIo(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: false,
+  },
+}));
 app.use(API_PREFIX, rootRouter);
 
-// app.use(rootRouter);
-
-
-// Global error handling
+// === Error Handler ===
 app.use(globalErrorMiddleware);
 
-app.get("/health", (req, res) => {
-  console.log("Health check triggered");
-  res.status(200).send("OK");
-});
+// === Healthcheck & Simple Routes ===
+app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get(`${API_PREFIX}/user`, (req, res) => res.send('welcome to user'));
+app.get(`${API_PREFIX}/home`, (req, res) => res.send('welcome to home'));
+app.get('/', (req, res) => res.send('server is running.....!!!'));
 
-app.get(`${API_PREFIX}/user`, (req, res) => {
-  res.send("welcome to user");
-});
-
-app.get("/api/v1/home", (req, res) => {
-  res.send("welcome to home");
-});
-
-
-app.get("/", (req, res) => {
-  res.send("server is running.....!!!");
-});
-
+// === DB + Seeder ===
 dbConnect();
-
 adminSeed();
 
-
-
+// === Socket.io Auth + Handlers ===
+const io = app.get('io');
 io.use((socket, next) => {
-  // Get the token from the socket handshake headers
-  const token = socket.handshake.headers["x-access-token"] || socket.handshake.headers["authorization"]?.split(" ")[1];
+  const token =
+    socket.handshake.headers['x-access-token'] ||
+    socket.handshake.headers['authorization']?.split(' ')[1];
 
   if (!token) {
-    console.log("Token missing in socket connection");
-    return next(new Error("Authentication token missing"));
+    console.log('Token missing in socket connection');
+    return next(new Error('Authentication token missing'));
   }
-  console.log(token, "token");
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET_KEY); // your JWT secret
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     socket.userId = decoded.id;
-    console.log(socket.userId, "userId");
-
+    console.log(socket.userId, 'userId');
     next();
   } catch (err) {
-    console.log("Invalid token");
-    return next(new Error("Invalid authentication token"));
+    console.log('Invalid token');
+    return next(new Error('Invalid authentication token'));
   }
 });
 
-io.on("connection", (socket) => {
-  console.log("a user is connected", socket.id);
+io.on('connection', (socket) => {
+  console.log('a user is connected', socket.id);
 
-
-
-  // socket.on("joinRoom", (data) => {
-  //   console.log("data_in_joinRoom_in_backend:", data);
-
-  //   socket.join(data.chatroom);               // Join the chatroom
-  //   socket.join(socket.userId.toString());    // Personal room
-  //   socket.join(socket.adminId);
-  //   ChatRoomController.getChatRoomData(socket, data);
-  // });
-
-  socket.on("joinRoom", (data) => {
-    console.log("data_in_joinRoom_in_backend:", data);
-
-    // Ensure the user joins the chatroom and personal room
-    socket.join(data.chatroom);               // Join the chatroom
-    socket.join(socket.userId.toString());    // Personal room
-    socket.join(socket.adminId);              // Admin room (if applicable)
-
-    // Fetch and emit chatroom data (messages, participants, etc.)
+  socket.on('joinRoom', (data) => {
+    console.log('data_in_joinRoom_in_backend:', data);
+    socket.join(data.chatroom);
+    socket.join(socket.userId.toString());
+    socket.join(socket.adminId);
     ChatRoomController.getChatRoomData(socket, data);
   });
 
-
-
-
-  // Leave Chatroom
-  socket.on("leaveRoom", ({ chatroom, user }) => {
+  socket.on('leaveRoom', ({ chatroom, user }) => {
     socket.leave(chatroom);
     socket.leave(user);
-    console.log("Socket Disconnect From Back End");
-    console.log(`user left`);
+    console.log('Socket Disconnect From Back End');
   });
 
-  // Send Message
-  socket.on("sendMessage", (data) => {
+  socket.on('sendMessage', (data) => {
     ChatRoomController.sendMessage(io, socket, data);
   });
 
-
-
-  socket.on("disconnect", () => {
+  socket.on('disconnect', () => {
     console.log(`user left`);
   });
-
-
-})
-
-// Create AI WebSocket Server
-const aiWss = new WebSocketServer({
-  server: server,
-  path: '/ai'
 });
+
+// === AI WebSocket Server ===
+const { WebSocketServer } = require('ws');
+const aiWss = new WebSocketServer({ server, path: '/ai' });
 
 aiWss.on('connection', async (ws, req) => {
   console.log('AI WebSocket client connected');
-
   const url = new URL(req.url, `http://${req.headers.host}`);
   const mode = url.searchParams.get('mode') || 'chat-to-chat';
 
   let userId = null;
   let cleanup = () => { };
 
-  // Handle authentication
   const authHandler = (data) => {
     try {
       const message = JSON.parse(data.toString());
@@ -235,64 +531,28 @@ aiWss.on('connection', async (ws, req) => {
           userId = decoded.id;
           console.log(`AI User ${userId} authenticated with mode: ${mode}`);
 
-          // Set up appropriate handler based on mode
-          setupAIHandler(ws, userId, mode).then(cleanupFn => {
-            cleanup = cleanupFn;
+          setupAIHandler(ws, userId, mode)
+            .then((cleanupFn) => {
+              cleanup = cleanupFn;
+              ws.send(
+                JSON.stringify({
+                  type: 'session.ready',
+                  message: `Connected to Ollie AI in ${mode} mode`,
+                  mode: mode,
+                })
+              );
+            })
+            .catch((error) => {
+              console.error(`Error setting up ${mode} mode:`, error);
+              ws.send(
+                JSON.stringify({ type: 'error', message: `Failed to setup ${mode} mode` })
+              );
+            });
 
-            // Send ready message
-            ws.send(JSON.stringify({
-              type: 'session.ready',
-              message: `Connected to Ollie AI in ${mode} mode`,
-              mode: mode
-            }));
-
-            // Send initial welcome message from Ollie
-            setTimeout(async () => {
-              const welcomeMessage = `Hey there! 👋 I'm Ollie, your friendly assistant here to help you make the most of the app.
-
-I can set reminders, manage your profile, help you write posts, guide you through blogs, chat with your friends, and even handle payments or events!
-
-If you're ever stuck, just ask. 😊  
-Want a quick overview of what I can do?`;
-
-              ws.send(JSON.stringify({
-                type: 'response.text.complete',
-                content: welcomeMessage
-              }));
-
-              // Generate TTS audio for chat-to-speech mode
-              if (mode === 'chat-to-speech') {
-                try {
-                  const { openaiService } = require('./AI/services/openai-service');
-                  const audioBuffer = await openaiService.generateSpeech(welcomeMessage, 'alloy', 'DEFAULT');
-                  const audioBase64 = audioBuffer.toString('base64');
-
-                  ws.send(JSON.stringify({
-                    type: 'response.audio.complete',
-                    audio: audioBase64,
-                    format: 'mp3'
-                  }));
-                } catch (error) {
-                  console.error('Error generating welcome message audio:', error);
-                }
-              }
-            }, 500);
-          }).catch(error => {
-            console.error(`Error setting up ${mode} mode:`, error);
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: `Failed to setup ${mode} mode`
-            }));
-          });
-
-          // Remove auth handler after successful authentication
           ws.off('message', authHandler);
         } catch (error) {
           console.error('AI WebSocket authentication error:', error);
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Authentication failed'
-          }));
+          ws.send(JSON.stringify({ type: 'error', message: 'Authentication failed' }));
           ws.close();
         }
       }
@@ -301,7 +561,6 @@ Want a quick overview of what I can do?`;
     }
   };
 
-  // Wait for authentication
   ws.on('message', authHandler);
 
   ws.on('close', () => {
@@ -315,7 +574,6 @@ Want a quick overview of what I can do?`;
   });
 });
 
-// AI handler setup function
 async function setupAIHandler(ws, userId, mode) {
   switch (mode) {
     case 'chat-to-chat':
@@ -329,10 +587,8 @@ async function setupAIHandler(ws, userId, mode) {
   }
 }
 
+// === Start Server ===
 server.listen(port, '0.0.0.0', () => {
   console.log(`server is run at ${port}`);
 });
 
-// app.listen(port, () => {
-//   console.log(`Server is running at http://localhost:${port}`);
-// });
