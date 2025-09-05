@@ -30,7 +30,7 @@ console.log(API_PREFIX, 'API_PREFIX');
 
 app.use(morgan('dev'));
 
-app.use(cors({ origin: '*' }));
+// app.use(cors({ origin: '*' }));
 
 // Logging middleware
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -58,7 +58,7 @@ const corsOptions = {
       // In production, specify allowed origins
       const allowedOrigins = process.env.CORS_ORIGIN ?
         process.env.CORS_ORIGIN.split(',') :
-        ['https://yourdomain.com', 'https://api.theollie.app'];
+        ['https://admin.theollie.app', 'https://api.theollie.app'];
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
