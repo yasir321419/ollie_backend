@@ -20,7 +20,7 @@ const handleMultiPartData = multer({
   },
   fileFilter: (req, file, callback) => {
     const FileTypes =
-      /jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|wav|dmg/;
+      /jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|wav|dmg|.MOV/;
 
     const mimTypeValid = FileTypes.test(file.mimetype); // Check mimetype
     const extnameValid = FileTypes.test(path.extname(file.originalname).toLowerCase()); // Check file extension
