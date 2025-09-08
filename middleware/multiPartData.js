@@ -16,7 +16,7 @@ const Storage = multer.diskStorage({
 const handleMultiPartData = multer({
   storage: multer.memoryStorage(), // Store files in memory (buffer)
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100 MB limit in bytes
+    fileSize: 1024 * 1024 * 1024, // 1 GB limit in bytes
   },
   fileFilter: (req, file, callback) => {
     const FileTypes =

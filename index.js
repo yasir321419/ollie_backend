@@ -59,7 +59,7 @@ app.use(cors(corsOptions));
 // Body parsing with size limits
 app.use('/public', express.static('public'));
 app.use(bodyParser.json({
-  limit: '10mb',
+  limit: '200mb',
   verify: (req, res, buf) => {
     // Store raw body for webhook verification if needed
     req.rawBody = buf;
