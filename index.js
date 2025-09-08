@@ -49,7 +49,7 @@ app.use(globalLimiter);
 
 // CORS configuration
 const corsOptions = {
-  origin: ["https://theollie.app", "https://admin.theollie.app", "https://api.theollie.app", "https://dashboard-olie-g.vercel.app", "*"],
+  origin: ["https://theollie.app", "https://admin.theollie.app", "https://api.theollie.app", "https://dashboard-olie-g.vercel.app", "http://localhost:3001/", "*"],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
   credentials: false
