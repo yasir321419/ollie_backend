@@ -3,7 +3,7 @@ const { handlerError } = require("../resHandler/responseHandler");
 const globalErrorMiddleware = (err, req, res, next) => {
   const statusCode = err.status ?? 500;
   let message = err.message ?? "Internal Server Error";
-  
+
   // Log error details for debugging (never expose in production response)
   const errorDetails = {
     message: err.message,
@@ -15,10 +15,10 @@ const globalErrorMiddleware = (err, req, res, next) => {
     timestamp: new Date().toISOString(),
     userId: req.user?.id || 'anonymous'
   };
-  
+
   // Log full error details for server monitoring
   console.error('🚨 Application Error:', errorDetails);
-  
+
   // In production, don't expose sensitive error details
   if (process.env.NODE_ENV === 'production') {
     // Only expose safe, user-friendly messages
@@ -32,9 +32,9 @@ const globalErrorMiddleware = (err, req, res, next) => {
       case 403:
         message = "Access denied";
         break;
-      case 404:
-        message = "Resource not found";
-        break;
+      // case 404:
+      //   message = "Resource not found";
+      // break;
       case 429:
         message = "Too many requests";
         break;
@@ -44,32 +44,32 @@ const globalErrorMiddleware = (err, req, res, next) => {
         break;
     }
   }
-  
+
   // Handle specific error types
   if (err.name === 'ValidationError') {
     // Joi validation errors
-    const validationMessage = err.details ? 
-      err.details.map(detail => detail.message).join(', ') : 
+    const validationMessage = err.details ?
+      err.details.map(detail => detail.message).join(', ') :
       'Validation failed';
     handlerError(res, 400, null, validationMessage);
     return;
   }
-  
+
   if (err.name === 'CastError') {
     handlerError(res, 400, null, 'Invalid ID format');
     return;
   }
-  
+
   if (err.name === 'MongoError' || err.name === 'MongoServerError') {
     handlerError(res, 500, null, 'Database error');
     return;
   }
-  
+
   if (err.code === 'LIMIT_FILE_SIZE') {
     handlerError(res, 400, null, 'File too large');
     return;
   }
-  
+
   // Handle Prisma errors
   if (err.code?.startsWith('P')) {
     let prismaMessage = 'Database operation failed';
@@ -87,7 +87,7 @@ const globalErrorMiddleware = (err, req, res, next) => {
     handlerError(res, 400, null, prismaMessage);
     return;
   }
-  
+
   handlerError(res, statusCode, null, message);
 };
 
