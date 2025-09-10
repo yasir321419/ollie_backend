@@ -19,11 +19,17 @@ const handleMultiPartData = multer({
     fileSize: 1024 * 1024 * 1024, // 1 GB limit in bytes
   },
   fileFilter: (req, file, callback) => {
-    const FileTypes =
-      /jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|wav|dmg|.MOV/;
+    // const FileTypes =
+    //   /jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|wav|dmg|MOV/;
 
-    const mimTypeValid = FileTypes.test(file.mimetype); // Check mimetype
-    const extnameValid = FileTypes.test(path.extname(file.originalname).toLowerCase()); // Check file extension
+    // const mimTypeValid = FileTypes.test(file.mimetype); // Check mimetype
+    // const extnameValid = FileTypes.test(path.extname(file.originalname).toLowerCase()); // Check file extension
+
+    const fileTypes = /(jpeg|jpg|png|gif|pdf|tif|tiff|doc|docm|docx|dotx|csv|aac|ogg|3gpp|3gpp2|wav|webm|mp4|mp3|mpeg|aiff|caf|flac|dmg|mov|quicktime)/i;
+
+    const mimTypeValid = fileTypes.test(file.mimetype); // will match "video/quicktime"
+    const extnameValid = fileTypes.test(path.extname(file.originalname).toLowerCase()); // will match ".mov"
+
 
     // Log file info for debugging (can remove later)
     console.log(`File Mimetype: ${file.mimetype}, File Extension: ${path.extname(file.originalname)}`);
