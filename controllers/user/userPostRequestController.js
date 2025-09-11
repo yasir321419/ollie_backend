@@ -69,11 +69,11 @@ const createPostRequest = async (req, res, next) => {
       throw new ValidationError("post request not create")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully created a post request.`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully created a post request.`
+    );
 
     handlerOk(res, 200, createpostrequest, 'post request created successfully');
 
@@ -123,93 +123,6 @@ const getUserPostRequest = async (req, res, next) => {
   }
 }
 
-// const getAllPostRequest = async (req, res, next) => {
-//   try {
-//     const page = Math.max(parseInt(req.query.page) || 1, 1);
-//     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
-//     const skip = (page - 1) * limit;
-//     const { id: userId } = req.user;
-
-//     // 1️⃣ Check if the user has any post requests
-//     const userRequestCount = await prisma.postRequest.count({
-//       where: { userId }
-//     });
-
-//     console.log(`User has ${userRequestCount} post requests`);
-
-//     let whereClause = {};
-//     if (userRequestCount > 0) {
-//       // If the user has requests, fetch both their own requests and others' requests
-//       whereClause = {
-//         OR: [
-//           { userId }, // user's own posts
-//           {
-//             status: {
-//               in: [
-//                 PostRequestStatusConstants.NoRequest,
-//                 PostRequestStatusConstants.ReachOut,
-//                 PostRequestStatusConstants.VolunteerRequestSent,
-//                 PostRequestStatusConstants.MarkAsCompleted,
-//                 PostRequestStatusConstants.TaskCompleted
-//               ]
-//             },
-//             userId: { not: userId } // exclude user's own posts from others' posts
-//           }
-//         ]
-//       };
-//     } else {
-//       // If the user has no requests, show only posts from other users
-//       whereClause = {
-//         status: {
-//           in: [
-//             PostRequestStatusConstants.NoRequest,
-//             PostRequestStatusConstants.ReachOut,
-//             PostRequestStatusConstants.VolunteerRequestSent,
-//             PostRequestStatusConstants.MarkAsCompleted,
-//             PostRequestStatusConstants.TaskCompleted
-//           ]
-//         },
-//         userId: { not: userId } // Only show posts from other users
-//       };
-//     }
-
-//     console.log(`Where Clause: `, whereClause);
-
-//     // 2️⃣ Fetch data
-//     const postRequests = await prisma.postRequest.findMany({
-//       where: whereClause,
-//       include: {
-//         user: true,
-//         categories: true
-//       },
-//       orderBy: { scheduledAt: "desc" },
-//       skip,
-//       take: limit
-//     });
-
-//     console.log(`Post Requests: `, postRequests); // Check the fetched data
-
-//     // 3️⃣ If no posts at all, return a message
-//     if (postRequests.length === 0) {
-//       throw new NotFoundError("No post requests found for the user and no default requests available");
-//     }
-
-//     // 4️⃣ If the user has no requests, set status to "NoRequest" for other users' posts
-//     if (userRequestCount === 0) {
-//       postRequests.forEach(post => {
-//         post.status = PostRequestStatus.NoRequest; // Set status for other users' posts to "NoRequest"
-//       });
-//     }
-
-//     console.log(`Post Requests with updated status: `, postRequests);
-
-//     // 5️⃣ Send response
-//     handlerOk(res, 200, postRequests, "Post requests found successfully");
-
-//   } catch (error) {
-//     next(error);
-//   }
-// };
 
 
 const getAllPostRequest = async (req, res, next) => {
@@ -384,17 +297,17 @@ const sendVolunteerRequest = async (req, res, next) => {
       throw new ValidationError("post request not create")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully sent a volunteer request.`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully sent a volunteer request.`
+    );
 
-    // await sendNotification(
-    //   findpost.userId, // post owner's user ID
-    //   findpost.user.deviceToken, // assuming you have access to this
-    //   `Hi ${findpost.user.firstName}, you received a new volunteer request for your post.`
-    // );
+    await sendNotification(
+      findpost.userId, // post owner's user ID
+      findpost.user.deviceToken, // assuming you have access to this
+      `Hi ${findpost.user.firstName}`, `you received a new volunteer request for your post.`
+    );
 
 
     handlerOk(res, 200, { ...updatedPostRequest, createrequest }, 'Volunteer request sent successfully')
@@ -519,17 +432,17 @@ const acceptVolunteer = async (req, res, next) => {
     }
 
     // Optionally send notifications if needed
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully ${action}ed a volunteer request.`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully ${action}ed a volunteer request.`
+    );
 
-    // await sendNotification(
-    //   findrequest.volunteerId,
-    //   findrequest.volunteer.deviceToken,
-    //   `Hi ${findrequest.volunteer.firstName}, your volunteer request has been ${action}ed!`
-    // );
+    await sendNotification(
+      findrequest.volunteerId,
+      findrequest.volunteer.deviceToken,
+      `Hi ${findrequest.volunteer.firstName}`, `your volunteer request has been ${action}ed!`
+    );
 
     handlerOk(res, 200, { updatedVolunteerRequest, updatedPostRequest }, `Volunteer request ${action}ed successfully`);
 
@@ -585,12 +498,12 @@ const markAsCompletedByVolunteer = async (req, res, next) => {
       throw new ValidationError("post request not updated")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully marked the request as completed as a volunteer.`
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully marked the request as completed as a volunteer.`
 
-    // );
+    );
 
     handlerOk(res, 200, { ...updatedrequest, updatedVolunteerRequest }, 'Post marked as completed by volunteer successfully');
   } catch (error) {
@@ -649,12 +562,12 @@ const confirmTaskCompletedByOwner = async (req, res, next) => {
       throw new ValidationError("post request not updated")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully marked the request as completed as a owner.`
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully marked the request as completed as a owner.`
 
-    // );
+    );
 
     handlerOk(res, 200, { ...updatedPostRequest, updatedVolunteerRequest }, 'post request updated successfully');
 

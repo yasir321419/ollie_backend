@@ -47,6 +47,12 @@ const createUserTask = async (req, res, next) => {
       throw new ValidationError("User task not created");
     }
 
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have created the task titled "${createtask.taskName}"`
+    );
+
     // Send response to frontend
     handlerOk(res, 200, createtask, "User task created successfully");
   } catch (error) {
@@ -112,11 +118,11 @@ const markAsCompletedTask = async (req, res, next) => {
       }
     });
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have marked the task titled "${findtask.taskName}" as completed.`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have marked the task titled "${findtask.taskName}" as completed.`
+    );
 
     handlerOk(res, 200, updateddata, 'task is completed')
 

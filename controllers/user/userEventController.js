@@ -157,11 +157,11 @@ const markAsGoing = async (req, res, next) => {
       }
     });
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have marked yourself as going to the event titled "${findevent.eventName}".`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have marked yourself as going to the event titled "${findevent.eventName}".`
+    );
 
     handlerOk(res, 200, null, "Marked as going successfully");
 

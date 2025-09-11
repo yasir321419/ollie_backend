@@ -12,6 +12,7 @@ const uploadFileWithFolder = require("../../utils/s3Upload");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const path = require("path");
+const sendNotification = require("../../utils/notification");
 
 
 const userRegister = async (req, res, next) => {
@@ -880,7 +881,7 @@ const getMe = async (req, res, next) => {
 const submitFeedBack = async (req, res, next) => {
     try {
         const { email, message } = req.body;
-
+        const { id, deviceToken, firstName } = req.user;
         const findemail = await prisma.user.findFirst({
             where: {
                 email
@@ -900,6 +901,13 @@ const submitFeedBack = async (req, res, next) => {
         if (!createfeedback) {
             throw new ValidationError("feed back not submit")
         }
+
+        await sendNotification(
+            id,
+            deviceToken,
+            `Hi ${firstName}`,
+            "you have submitted feedback successfully"
+        );
 
         handlerOk(res, 201, createfeedback, "feed back submitted successfully")
 

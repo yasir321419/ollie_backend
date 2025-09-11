@@ -243,17 +243,16 @@ const saveBlog = async (req, res, next) => {
     }
 
     // Optional: Send notification
-    // await sendNotification(id, deviceToken, `Hi ${firstName}, you saved "${blogTitle}"!`);
+    await sendNotification(id,
+      deviceToken,
+      `Hi ${firstName}`,
+      `you saved "${blogTitle}"!`);
 
     handlerOk(res, 200, null, 'Blog saved successfully');
   } catch (error) {
     next(error);
   }
 };
-
-
-
-
 
 
 const showSaveBlog = async (req, res, next) => {
@@ -351,11 +350,12 @@ const likeAndUnlikeBlog = async (req, res, next) => {
       },
     });
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have ${action} the blog titled "${findblog.title}".`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`,
+      `you have ${action} the blog titled "${findblog.title}".`
+    );
 
     handlerOk(res, 200, { findblog, likeCount, action }, `Blog ${action} successfully`);
   } catch (error) {
@@ -408,11 +408,12 @@ const commentBlog = async (req, res, next) => {
       throw new ValidationError("comment not count")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you commented on the blog titled "${findblog.title}".`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`,
+      `you commented on the blog titled "${findblog.title}".`
+    );
 
 
     handlerOk(res, 200, { countComment, createcomment }, "comment on post successfully")
@@ -505,13 +506,13 @@ const likeAndReplyOnComment = async (req, res, next) => {
       where: { parentId: commentId }
     });
 
-    // const truncatedComment = findcomment.comment.length > 30
-    //   ? findcomment.comment.substring(0, 30) + "..."
-    //   : findcomment.comment;
+    const truncatedComment = findcomment.comment.length > 30
+      ? findcomment.comment.substring(0, 30) + "..."
+      : findcomment.comment;
 
-    // const notificationMessage = `Hi ${firstName}, you have ${actions.join(" and ")} on the comment: "${truncatedComment}"`;
+    const notificationMessage = `you have ${actions.join(" and ")} on the comment: "${truncatedComment}"`;
 
-    // await sendNotification(id, deviceToken, notificationMessage);
+    await sendNotification(id, deviceToken, `Hi ${firstName}`, notificationMessage);
 
 
     handlerOk(res, 200, { liked, replied, unliked, likeCount, replyCount }, message);
@@ -844,11 +845,12 @@ const saveFavoriteTopic = async (req, res, next) => {
       throw new ValidationError("Topic is not save")
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you saved the topic titled "${topic.name}" in your save history!`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`,
+      `you saved the topic titled "${topic.name}" in your save history!`
+    );
 
     handlerOk(res, 201, saveTopic, "Topic saved successfully");
   } catch (error) {

@@ -103,11 +103,11 @@ const buyCredit = async (req, res, next) => {
     });
 
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully purchased credit worth ${creditAmount}!`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully purchased credit worth ${creditAmount}!`
+    );
 
     handlerOk(res, 200, { connects: connectsToGive, paymentSource }, 'Credit purchased and connects assigned successfully');
 
@@ -240,11 +240,11 @@ const upgradeSubscription = async (req, res, next) => {
       }
     })
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, you have successfully upgraded your subscription to the ${plan} plan worth $${price}!`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `you have successfully upgraded your subscription to the ${plan} plan worth $${price}!`
+    );
 
 
 
@@ -271,11 +271,11 @@ const donateNow = async (req, res, next) => {
       throw new ValidationError("donation not created");
     }
 
-    // await sendNotification(
-    //   id,
-    //   deviceToken,
-    //   `Hi ${firstName}, thank you for your donation of $${amount}!`
-    // );
+    await sendNotification(
+      id,
+      deviceToken,
+      `Hi ${firstName}`, `thank you for your donation of $${amount}!`
+    );
 
     handlerOk(res, 200, donate, 'user donate successfully');
 
