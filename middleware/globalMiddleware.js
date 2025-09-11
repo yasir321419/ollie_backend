@@ -5,19 +5,19 @@ const globalErrorMiddleware = (err, req, res, next) => {
   let message = err.message ?? "Internal Server Error";
 
   // Log error details for debugging (never expose in production response)
-  const errorDetails = {
-    message: err.message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString(),
-    userId: req.user?.id || 'anonymous'
-  };
+  // const errorDetails = {
+  //   message: err.message,
+  //   stack: err.stack,
+  //   url: req.url,
+  //   method: req.method,
+  //   ip: req.ip,
+  //   userAgent: req.get('User-Agent'),
+  //   timestamp: new Date().toISOString(),
+  //   userId: req.user?.id || 'anonymous'
+  // };
 
   // Log full error details for server monitoring
-  console.error('🚨 Application Error:', errorDetails);
+  // console.error('🚨 Application Error:', errorDetails);
 
   // In production, don't expose sensitive error details
   if (process.env.NODE_ENV === 'production') {
