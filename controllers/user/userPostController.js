@@ -732,7 +732,11 @@ const showAllPostByInterest = async (req, res, next) => {
     const allPosts = [...posts, ...userPosts];
 
     if (allPosts.length === 0) {
-      throw new NotFoundError("No posts found");
+      // throw new NotFoundError("No posts found");
+      return res.status(404).json({
+        success: false,
+        message: "No posts found",
+      });
     }
 
     // Return paginated response with total count
