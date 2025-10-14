@@ -18,6 +18,10 @@ const io = socketIo(server, {
     origin: process.env.CORS_ORIGIN || "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: false
+  },
+  // Ensure the server explicitly negotiates compression when requested by clients
+  perMessageDeflate: {
+    threshold: 1024, // compress larger payloads, skip very small frames
   }
 });
 const ChatRoomController = require("./controllers/user/userChatService");
@@ -194,7 +198,8 @@ io.on("connection", (socket) => {
 // Create AI WebSocket Server
 const aiWss = new WebSocketServer({
   server: server,
-  path: '/ai'
+  path: '/ai',
+  perMessageDeflate: true
 });
 
 aiWss.on('connection', async (ws, req) => {
