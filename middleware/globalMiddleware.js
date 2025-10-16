@@ -35,6 +35,9 @@ const globalErrorMiddleware = (err, req, res, next) => {
       // case 404:
       //   message = "Resource not found";
       // break;
+      case 409:
+        message = err.message || "Conflict";
+        break;
       case 429:
         message = "Too many requests";
         break;
