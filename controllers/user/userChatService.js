@@ -99,13 +99,6 @@ const sendMessage = async (io, socket, data) => {
       }
     });
   });
-
-  // Optionally, emit the success message to the sender
-  // return socket.emit("message", {
-  //   status: "success",
-  //   data: newMessage,
-  //   message: "Message sent successfully",
-  // });
 };
 
 
