@@ -13,16 +13,42 @@ const http = require("http");
 const server = http.createServer(app);
 const rateLimit = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
+const normalizeOrigins = (origins) => {
+  if (!origins) {
+    return ['*'];
+  }
+  if (Array.isArray(origins)) {
+    return origins;
+  }
+  const parsed = origins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return parsed.length === 0 ? ['*'] : parsed;
+};
+const allowedOrigins = normalizeOrigins(process.env.CORS_ORIGIN);
+const socketOrigins = allowedOrigins.includes('*') ? '*' : allowedOrigins;
+// Compression defaults to off because upstream proxies can corrupt FIN/RSV bits.
+// Set SOCKET_COMPRESSION=true explicitly if the deployment path safely preserves WebSocket frames.
+const isCompressionEnabled = (process.env.SOCKET_COMPRESSION ?? '').toLowerCase() === 'true';
+const perMessageDeflateOptions = isCompressionEnabled ? {
+  threshold: 4096,
+  serverNoContextTakeover: true,
+  clientNoContextTakeover: true
+} : false;
+const httpCompressionOptions = isCompressionEnabled ? {
+  threshold: 4096
+} : false;
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "*",
+    origin: socketOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: false
   },
-  // Ensure the server explicitly negotiates compression when requested by clients
-  perMessageDeflate: {
-    threshold: 1024, // compress larger payloads, skip very small frames
-  }
+  // Compression breaks when nginx strips FIN/RSV bits in production, so allow opt-in via env var.
+  perMessageDeflate: perMessageDeflateOptions,
+  httpCompression: httpCompressionOptions,
+  allowEIO3: true
 });
 const ChatRoomController = require("./controllers/user/userChatService");
 const jwt = require('jsonwebtoken');
@@ -53,7 +79,7 @@ app.use(globalLimiter);
 
 // CORS configuration
 const corsOptions = {
-  origin: ["https://theollie.app", "https://admin.theollie.app", "https://api.theollie.app", "https://dashboard-olie-g.vercel.app", "http://localhost:3001", "*"],
+  origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token'],
   credentials: false
@@ -196,124 +222,113 @@ io.on("connection", (socket) => {
 })
 
 // Create AI WebSocket Server
-const aiWss = new WebSocketServer({
-  server: server,
-  path: '/ai',
-  perMessageDeflate: true
-});
+// const aiWss = new WebSocketServer({
+//   server: server,
+//   path: '/ai',
+//   perMessageDeflate: perMessageDeflateOptions || false,
+//   maxPayload: 10 * 1024 * 1024 // 10MB safeguard against giant frames
+// });
 
-aiWss.on('connection', async (ws, req) => {
-  console.log('AI WebSocket client connected');
+// aiWss.on('connection', async (ws, req) => {
+//   console.log('AI WebSocket client connected');
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const mode = url.searchParams.get('mode') || 'chat-to-chat';
+//   const url = new URL(req.url, `http://${req.headers.host}`);
+//   const mode = url.searchParams.get('mode') || 'chat-to-chat';
 
-  let userId = null;
-  let cleanup = () => { };
+//   let userId = null;
+//   let cleanup = () => { };
 
-  // Handle authentication
-  const authHandler = (data) => {
-    try {
-      const message = JSON.parse(data.toString());
-      if (message.type === 'auth') {
-        try {
-          const decoded = jwt.verify(message.token, process.env.SECRET_KEY);
-          userId = decoded.id;
-          console.log(`AI User ${userId} authenticated with mode: ${mode}`);
+//   // Handle authentication
+//   const authHandler = (data) => {
+//     try {
+//       const message = JSON.parse(data.toString());
+//       if (message.type === 'auth') {
+//         try {
+//           const decoded = jwt.verify(message.token, process.env.SECRET_KEY);
+//           userId = decoded.id;
+//           console.log(`AI User ${userId} authenticated with mode: ${mode}`);
 
-          // Set up appropriate handler based on mode
-          setupAIHandler(ws, userId, mode).then(cleanupFn => {
-            cleanup = cleanupFn;
+//           // Set up appropriate handler based on mode
+//           setupAIHandler(ws, userId, mode).then(cleanupFn => {
+//             cleanup = cleanupFn;
 
-            // Send ready message
-            ws.send(JSON.stringify({
-              type: 'session.ready',
-              message: `Connected to Ollie AI in ${mode} mode`,
-              mode: mode
-            }));
+//             // Send ready message
+//             ws.send(JSON.stringify({
+//               type: 'session.ready',
+//               message: `Connected to Ollie AI in ${mode} mode`,
+//               mode: mode
+//             }));
 
-            // Send initial welcome message from Ollie
-            setTimeout(async () => {
-              const welcomeMessage = `Hey there! 👋 I'm Ollie, your friendly assistant here to help you make the most of the app.
+//             // Send initial welcome message from Ollie
+//             setTimeout(async () => {
+//               const welcomeMessage = `Hey there! 👋 I'm Ollie, your friendly assistant here to help you make the most of the app.
 
-I can set reminders, manage your profile, help you write posts, guide you through blogs, chat with your friends, and even handle payments or events!
+// I can set reminders, manage your profile, help you write posts, guide you through blogs, chat with your friends, and even handle payments or events!
 
-If you're ever stuck, just ask. 😊
-Want a quick overview of what I can do?`;
+// If you're ever stuck, just ask. 😊
+// Want a quick overview of what I can do?`;
 
-              ws.send(JSON.stringify({
-                type: 'response.text.complete',
-                content: welcomeMessage
-              }));
+//               ws.send(JSON.stringify({
+//                 type: 'response.text.complete',
+//                 content: welcomeMessage
+//               }));
 
-              // Generate TTS audio for chat-to-speech mode
-              if (mode === 'chat-to-speech') {
-                try {
-                  const { openaiService } = require('./AI/services/openai-service');
-                  const audioBuffer = await openaiService.generateSpeech(welcomeMessage, 'alloy', 'DEFAULT');
-                  const audioBase64 = audioBuffer.toString('base64');
+//               // Generate TTS audio for chat-to-speech mode
+//               if (mode === 'chat-to-speech') {
+//                 try {
+//                   const { openaiService } = require('./AI/services/openai-service');
+//                   const audioBuffer = await openaiService.generateSpeech(welcomeMessage, 'alloy', 'DEFAULT');
+//                   const audioBase64 = audioBuffer.toString('base64');
 
-                  ws.send(JSON.stringify({
-                    type: 'response.audio.complete',
-                    audio: audioBase64,
-                    format: 'mp3'
-                  }));
-                } catch (error) {
-                  console.error('Error generating welcome message audio:', error);
-                }
-              }
-            }, 500);
-          }).catch(error => {
-            console.error(`Error setting up ${mode} mode:`, error);
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: `Failed to setup ${mode} mode`
-            }));
-          });
+//                   ws.send(JSON.stringify({
+//                     type: 'response.audio.complete',
+//                     audio: audioBase64,
+//                     format: 'mp3'
+//                   }));
+//                 } catch (error) {
+//                   console.error('Error generating welcome message audio:', error);
+//                 }
+//               }
+//             }, 500);
+//           }).catch(error => {
+//             console.error(`Error setting up ${mode} mode:`, error);
+//             ws.send(JSON.stringify({
+//               type: 'error',
+//               message: `Failed to setup ${mode} mode`
+//             }));
+//           });
 
-          // Remove auth handler after successful authentication
-          ws.off('message', authHandler);
-        } catch (error) {
-          console.error('AI WebSocket authentication error:', error);
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Authentication failed'
-          }));
-          ws.close();
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing auth message:', error);
-    }
-  };
+//           // Remove auth handler after successful authentication
+//           ws.off('message', authHandler);
+//         } catch (error) {
+//           console.error('AI WebSocket authentication error:', error);
+//           ws.send(JSON.stringify({
+//             type: 'error',
+//             message: 'Authentication failed'
+//           }));
+//           ws.close();
+//         }
+//       }
+//     } catch (error) {
+//       console.error('Error parsing auth message:', error);
+//     }
+//   };
 
-  // Wait for authentication
-  ws.on('message', authHandler);
+//   // Wait for authentication
+//   ws.on('message', authHandler);
 
-  ws.on('close', () => {
-    console.log(`AI User ${userId} disconnected from ${mode} mode`);
-    cleanup();
-  });
+//   ws.on('close', () => {
+//     console.log(`AI User ${userId} disconnected from ${mode} mode`);
+//     cleanup();
+//   });
 
-  ws.on('error', (error) => {
-    console.error(`AI WebSocket error for user ${userId}:`, error);
-    cleanup();
-  });
-});
+//   ws.on('error', (error) => {
+//     console.error(`AI WebSocket error for user ${userId}:`, error);
+//     cleanup();
+//   });
+// });
 
-// AI handler setup function
-async function setupAIHandler(ws, userId, mode) {
-  switch (mode) {
-    case 'chat-to-chat':
-      return await handleChatToChat(ws, userId);
-    case 'speech-to-chat':
-      return await handleSpeechToChat(ws, userId);
-    case 'chat-to-speech':
-      return await handleChatToSpeech(ws, userId);
-    default:
-      throw new Error('Invalid AI mode specified');
-  }
-}
+
 
 server.listen(port, '0.0.0.0', () => {
   console.log(`server is run at ${port}`);
