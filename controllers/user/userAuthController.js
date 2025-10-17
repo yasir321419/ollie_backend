@@ -706,66 +706,6 @@ const userLogOut = async (req, res, next) => {
 
 
 
-// const userDeleteAccount = async (req, res, next) => {
-//     try {
-//         const { id } = req.user;
-
-//         const result = await prisma.$transaction(async (tx) => {
-//             // 1) Chat rooms created by this user (blocks via creatorId)
-//             const rooms = await tx.chatRoom.findMany({
-//                 where: { creatorId: id },
-//                 select: { id: true },
-//             });
-//             const roomIds = rooms.map(r => r.id);
-
-//             if (roomIds.length) {
-//                 // Messages reference chatRoom WITHOUT onDelete cascade → delete first
-//                 await tx.message.deleteMany({ where: { chatRoomId: { in: roomIds } } });
-//                 // Participants have onDelete: Cascade, but deleteMany is harmless/explicit
-//                 await tx.chatRoomParticipant.deleteMany({ where: { chatRoomId: { in: roomIds } } });
-//                 // Now remove the rooms
-//                 await tx.chatRoom.deleteMany({ where: { id: { in: roomIds } } });
-//             }
-
-//             // 2) Messages sent by this user in any room (senderId → User.id). Keep messages, null sender.
-//             await tx.message.updateMany({
-//                 where: { senderId: id },
-//                 data: { senderId: null },
-//             });
-
-//             // 3) Wallet & transactions (delete tx first to avoid FK on walletId)
-//             await tx.walletTransaction.deleteMany({ where: { wallet: { userId: id } } });
-//             await tx.wallet.deleteMany({ where: { userId: id } });
-
-//             // 4) Purchases / subscriptions / posts by user
-//             await tx.connectPurchase.deleteMany({ where: { userId: id } });
-//             await tx.userSubscription.deleteMany({ where: { userId: id } });
-//             await tx.userPost.deleteMany({ where: { userId: id } });
-
-//             // 5) Event participation & volunteering (these relations default to RESTRICT)
-//             await tx.eventParticipant.deleteMany({ where: { userId: id } });
-//             await tx.volunteerRequest.deleteMany({ where: { volunteerId: id } });
-
-//             // 6) Credits referencing user (nullable → set null)
-//             await tx.credit.updateMany({ where: { userId: id }, data: { userId: null } });
-
-//             // 7) Misc direct user FKs (RESTRICT by default unless you set Cascade)
-//             await tx.notification.deleteMany({ where: { userId: id } });
-//             await tx.donation.deleteMany({ where: { userId: id } });
-
-//             // (Likes/comments/saves/tasks etc. are already modeled with onDelete: Cascade to User)
-
-//             // 8) Finally: delete the user
-//             const deletedUser = await tx.user.delete({ where: { id } });
-//             return { deletedUser };
-//         });
-
-//         handlerOk(res, 200, result, 'User account deleted successfully');
-//     } catch (error) {
-//         next(error);
-//     }
-// };
-
 const userDeleteAccount = async (req, res, next) => {
     try {
         const { id } = req.user;

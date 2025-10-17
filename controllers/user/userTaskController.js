@@ -61,8 +61,6 @@ const createUserTask = async (req, res, next) => {
 };
 
 
-
-
 const getUserTask = async (req, res, next) => {
   try {
     const { id } = req.user;
