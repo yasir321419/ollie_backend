@@ -51,6 +51,7 @@ const io = socketIo(server, {
   allowEIO3: true
 });
 const ChatRoomController = require("./controllers/user/userChatService");
+const prisma = require("./config/prismaConfig");
 const jwt = require('jsonwebtoken');
 const adminSeed = require('./seeder/adminseed');
 const morgan = require('morgan');
@@ -185,16 +186,76 @@ io.on("connection", (socket) => {
   //   ChatRoomController.getChatRoomData(socket, data);
   // });
 
-  socket.on("joinRoom", (data) => {
+  socket.on("joinRoom", async (data = {}) => {
     console.log("data_in_joinRoom_in_backend:", data);
 
-    // Ensure the user joins the chatroom and personal room
-    socket.join(data.chatroom);               // Join the chatroom
-    socket.join(socket.userId.toString());    // Personal room
-    socket.join(socket.adminId);              // Admin room (if applicable)
+    const chatroomId = data.chatroom ?? data.chatRoom;
+    if (!chatroomId) {
+      console.warn("joinRoom called without chatroom id", data);
+      return;
+    }
 
-    // Fetch and emit chatroom data (messages, participants, etc.)
-    ChatRoomController.getChatRoomData(socket, data);
+    const chatroomRoom = `chat:${chatroomId}`;
+
+    try {
+      const room = await prisma.chatRoom.findFirst({
+        where: { id: chatroomId },
+        select: {
+          chatRoomParticipants: {
+            select: { userIds: true, adminIds: true }
+          }
+        }
+      });
+
+      if (!room) {
+        console.warn("joinRoom rejected: chatroom not found", chatroomId);
+        return;
+      }
+
+      const normalizeIds = (value) =>
+        Array.isArray(value) ? value.map((id) => (id != null ? id.toString() : null)).filter(Boolean) : [];
+      const targetId = socket.userId != null ? socket.userId.toString() : "";
+
+      const isParticipant = room.chatRoomParticipants.some((p) => {
+        const userIds = normalizeIds(p.userIds);
+        const adminIds = normalizeIds(p.adminIds);
+        return userIds.includes(targetId) || adminIds.includes(targetId);
+      });
+
+      if (!isParticipant) {
+        console.warn(
+          `joinRoom rejected: socket ${socket.id} (user ${socket.userId}) is not a participant of chatroom ${chatroomId}`
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("joinRoom validation error:", error);
+      return;
+    }
+
+    for (const roomName of Array.from(socket.rooms)) {
+      if (roomName === socket.id) continue;
+      if (roomName.startsWith("chat:") && roomName !== chatroomRoom) {
+        socket.leave(roomName);
+      }
+    }
+
+    socket.join(chatroomRoom);                // Join the specific chatroom
+    socket.join(chatroomId.toString());       // Legacy room for backward compatibility
+    socket.data.activeChatRoom = chatroomRoom;
+
+    const personalRoom = `user:${socket.userId}`;
+    socket.join(personalRoom);                // Personal room
+    socket.join(socket.userId.toString());    // Legacy personal room
+
+    if (socket.userType === "ADMIN") {
+      const adminRoom = `admin:${socket.userId}`;
+      socket.join(adminRoom);                 // Admin-only room for cross-device sync
+    }
+
+    // Normalize payload so downstream always receives chatRoom
+    const normalizedData = { ...data, chatRoom: chatroomId };
+    ChatRoomController.getChatRoomData(socket, normalizedData);
   });
 
 
@@ -202,8 +263,23 @@ io.on("connection", (socket) => {
 
   // Leave Chatroom
   socket.on("leaveRoom", ({ chatroom, user }) => {
-    socket.leave(chatroom);
-    socket.leave(user);
+    const chatroomRoom = chatroom
+      ? (chatroom.startsWith("chat:") ? chatroom : `chat:${chatroom}`)
+      : null;
+    const userRoom = user
+      ? (user.startsWith("user:") ? user : `user:${user}`)
+      : null;
+
+    [chatroom, chatroomRoom, user, userRoom].forEach((room) => {
+      if (room) {
+        socket.leave(room);
+      }
+    });
+
+    if (socket.data?.activeChatRoom === chatroomRoom) {
+      socket.data.activeChatRoom = null;
+    }
+
     console.log("Socket Disconnect From Back End");
     console.log(`user left`);
   });

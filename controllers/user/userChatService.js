@@ -3,16 +3,22 @@ const prisma = require("../../config/prismaConfig");
 
 
 
-const sendMessage = async (io, socket, data) => {
-  const { chatroom, message } = data;
+const sendMessage = async (io, socket, data = {}) => {
+  const chatroomId = data.chatroom ?? data.chatRoom;
+  const { message } = data;
+  if (!chatroomId) {
+    console.warn("sendMessage called without chatroom id", data);
+    return;
+  }
+
   const userId = socket.userId;
   const userType = socket.userType; // 'USER' or 'ADMIN'
   console.log("Received message data:", data);
-  console.log(chatroom, 'chatroomid');
+  console.log(chatroomId, 'chatroomid');
 
   // Fetch chat room data from the database
   const chatRoomData = await prisma.chatRoom.findFirst({
-    where: { id: chatroom },
+    where: { id: chatroomId },
     include: {
       chatRoomParticipants: {
         // Accessing the userIds and adminIds
@@ -25,7 +31,7 @@ const sendMessage = async (io, socket, data) => {
   });
 
   if (!chatRoomData) {
-    console.log("Chat room not found for ID:", chatroom);
+    console.log("Chat room not found for ID:", chatroomId);
     return io.to(userId).emit("message", {
       status: "error",
       message: "Chat room not found",
@@ -34,8 +40,14 @@ const sendMessage = async (io, socket, data) => {
 
   // Check if user is a participant of the chat room
   const isParticipant = chatRoomData.chatRoomParticipants.some(
-    (p) =>
-      p.userIds.includes(userId) || p.adminIds.includes(userId) // Checking userIds and adminIds arrays
+    (p) => {
+      const normalize = (value) =>
+        Array.isArray(value) ? value.map((id) => id != null ? id.toString() : null).filter(Boolean) : [];
+      const userIds = normalize(p.userIds);
+      const adminIds = normalize(p.adminIds);
+      const targetId = userId != null ? userId.toString() : "";
+      return userIds.includes(targetId) || adminIds.includes(targetId);
+    }
   );
 
   if (!isParticipant) {
@@ -46,14 +58,30 @@ const sendMessage = async (io, socket, data) => {
     });
   }
 
+  // Make sure the sending socket is currently joined to the chatroom rooms.
+  const chatroomRoom = `chat:${chatroomId}`;
+  const legacyRoom = chatroomId.toString();
+
+  const ensureRoomJoin = async (roomName) => {
+    if (!roomName) return;
+    if (!socket.rooms.has(roomName)) {
+      console.log(`sendMessage: auto-joining socket ${socket.id} to room ${roomName}`);
+      await socket.join(roomName);
+    }
+  };
+
+  await ensureRoomJoin(chatroomRoom);
+  await ensureRoomJoin(legacyRoom);
+
+  socket.data.activeChatRoom = chatroomRoom;
+
   // Create message data
   const messageData = {
     content: message || null,
     attachmentUrl: null,
     attachmentType: null,
-    senderId: userId,
-    chatRoomId: chatroom,
-    ...(userType === "USER" && { senderId: userId }),
+    senderId: userType === "ADMIN" ? null : userId,
+    chatRoomId: chatroomId,
     ...(userType === "ADMIN" && { adminSenderId: userId }),
   };
 
@@ -83,22 +111,26 @@ const sendMessage = async (io, socket, data) => {
 
   console.log("New message saved:", newMessage);
 
-  // Emit the message to the chatroom and all participants
-  chatRoomData.chatRoomParticipants.forEach((p) => {
-    // Loop through userIds and adminIds and emit the message to them
-    const allParticipants = [...p.userIds, ...p.adminIds];
+  const outboundPayload = {
+    status: "success",
+    data: newMessage,
+    message: "Message sent successfully",
+  };
 
-    allParticipants.forEach((recipientId) => {
-      if (recipientId) {
-        console.log("Emitting message to recipient:", recipientId);
-        io.to(recipientId).emit("message", {
-          status: "success",
-          data: newMessage,
-          message: "Message sent successfully",
-        });
-      }
-    });
-  });
+  const roomMembers = io.sockets.adapter.rooms.get(chatroomRoom);
+  const legacyMembers = io.sockets.adapter.rooms.get(chatroomId.toString());
+
+  console.log(
+    "Broadcasting message to chatroom:",
+    chatroomRoom,
+    "memberCount:",
+    roomMembers ? roomMembers.size : 0,
+    "legacyCount:",
+    legacyMembers ? legacyMembers.size : 0
+  );
+
+  return io.to(chatroomRoom).emit("message", outboundPayload);
+
 };
 
 
@@ -141,8 +173,11 @@ const getChatRoomData = async (socket, data) => {
     }
 
     // Get the participants (users and admins)
-    const userIds = chatRoomData.chatRoomParticipants.flatMap(p => p.userIds);
-    const adminIds = chatRoomData.chatRoomParticipants.flatMap(p => p.adminIds);
+    const normalizeIds = (value) =>
+      Array.isArray(value) ? value.map((id) => (id != null ? id.toString() : null)).filter(Boolean) : [];
+
+    const userIds = chatRoomData.chatRoomParticipants.flatMap((p) => normalizeIds(p.userIds));
+    const adminIds = chatRoomData.chatRoomParticipants.flatMap((p) => normalizeIds(p.adminIds));
 
     const users = await prisma.user.findMany({
       where: {

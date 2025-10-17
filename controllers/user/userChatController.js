@@ -316,12 +316,15 @@ const uploadAttachment = async (req, res, next) => {
 
     // ✅ Emit message to chat participants via socket
     const io = req.app.get('io'); // You need to expose `io` in your app
-    findChatRoom.chatRoomParticipants.forEach((p) => {
-      io.to(p.toString()).emit("message", {
-        status: "success",
-        data: newMessage,
-      });
+    const chatroomRoom = `chat:${chatRoomId}`;
+    io.to(chatroomRoom).emit("message", {
+      status: "success",
+      data: newMessage,
     });
+    io.to(chatRoomId.toString()).emit("message", {
+      status: "success",
+      data: newMessage,
+    }); // Legacy support
 
     handlerOk(res, 200, 'Attachment sent successfully', newMessage);
 
