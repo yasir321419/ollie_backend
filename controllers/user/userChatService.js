@@ -104,8 +104,9 @@ const sendMessage = async (io, socket, data) => {
 
 const getChatRoomData = async (socket, data) => {
   try {
-    const userId = socket.userId;                  // ✅ From token
-    const chatroomId = data.chatroom;    // 🟢 Passed from client
+    const userId = socket.userId;
+    console.log(data, 'data')// ✅ From token
+    const chatroomId = data.chatRoom;    // 🟢 Passed from client
 
     const chatRoomData = await prisma.chatRoom.findFirst({
       where: { id: chatroomId },

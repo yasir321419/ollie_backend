@@ -27,23 +27,23 @@ const globalErrorMiddleware = (err, req, res, next) => {
         message = err.message || "Invalid request data";
         break;
       case 401:
-        message = "Authentication required";
+        message = err.message || "Authentication required";
         break;
       case 403:
-        message = "Access denied";
+        message = err.message || "Access denied";
         break;
-      // case 404:
-      //   message = "Resource not found";
-      // break;
+      case 404:
+        message = err.message || "Resource not found";
+        break;
       case 409:
         message = err.message || "Conflict";
         break;
       case 429:
-        message = "Too many requests";
+        message = err.message || "Too many requests";
         break;
       case 500:
       default:
-        message = "Internal server error";
+        message = err.message || "Internal server error";
         break;
     }
   }
